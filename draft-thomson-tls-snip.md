@@ -210,13 +210,14 @@ bootstrapping in HTTP/3 does just that.  Assuming that HTTP/2 or HTTP/1.1 are
 not vulnerable to attacks that would compromise integrity, a server can
 advertise the presence of an endpoint that supports HTTP/3.
 
-Alternative Services is secure, but it has suboptimal performance.  A client
-could attempt the protocol it prefers most, but that comes at a risk that this
-protocol is not supported by a server.  A client could implement a fallback,
-which might even be performed concurrently (see {{?HAPPY-EYEBALLS=RFC6555}}),
-but this costs time and resources.  A client avoids these costs by attempting
-the protocol it believes to be most widely supported, though this comes with a
-performance penalty in cases where the most-preferred protocol is supported.
+Under these assumptions Alternative Services is secure, but it has performance
+trade-offs.  A client could attempt the protocol it prefers most, but that comes
+at a risk that this protocol is not supported by a server.  A client could
+implement a fallback, which might even be performed concurrently (see
+{{?HAPPY-EYEBALLS=RFC6555}}), but this costs time and resources.  A client
+avoids these costs by attempting the protocol it believes to be most widely
+supported, though this comes with a performance penalty in cases where the
+most-preferred protocol is supported.
 
 A server that is discovered using Alternative Services uses the default protocol
 authentication scope.  As use of Alternative Services is discretionary for both
