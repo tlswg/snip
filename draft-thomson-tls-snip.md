@@ -1,6 +1,6 @@
 ---
 title: "Secure Negotiation of Incompatible Protocols in TLS"
-abbrev: "Incompatible Protocols"
+abbrev: "Authenticating Incompatible Protocols"
 docname: draft-thomson-tls-snip-latest
 category: info
 ipr: trust200902
@@ -139,7 +139,7 @@ struct {
   };
 } IncompatibleProtocols;
 ~~~
-{: #fix-syntax title="TLS Syntax for incompatible_protocols Extension"}
+{: #fig-syntax title="TLS Syntax for incompatible_protocols Extension"}
 
 This extension only applies to the ClientHello and EncryptedExtensions messages.
 An implementation that receives this extension in any other handshake message
@@ -200,6 +200,29 @@ control and protocol configurations.
 
 TODO: define how this can be used to authenticate protocol choices where there
 are incompatible QUIC versions.
+
+
+## Alternative Services
+
+It is possible to negotiate protocols based on an established connection without
+exposure to downgrade.  The Alternative Services {{?ALTSVC=RFC7838}}
+bootstrapping in HTTP/3 does just that.  Assuming that HTTP/2 or HTTP/1.1 are
+not vulnerable to attacks that would compromise integrity, a server can
+advertise the presence of an endpoint that supports HTTP/3.
+
+Alternative Services is secure, but it has suboptimal performance.  A client
+could attempt the protocol it prefers most, but that comes at a risk that this
+protocol is not supported by a server.  A client could implement a fallback,
+which might even be performed concurrently (see {{?HAPPY-EYEBALLS=RFC6555}}),
+but this costs time and resources.  A client avoids these costs by attempting
+the protocol it believes to be most widely supported, though this comes with a
+performance penalty in cases where the most-preferred protocol is supported.
+
+A server that is discovered using Alternative Services uses the default protocol
+authentication scope.  As use of Alternative Services is discretionary for both
+client and server, a client cannot expect to receive information about
+incompatible protocols.  To avoid downgrade, a client only has to avoid using an
+Alternative Service that offers a less-preferred protocol.
 
 
 ## Scope for Other Discovery Methods
@@ -283,21 +306,4 @@ TODO: register the extension
 
 # Acknowledgments
 
-
-
-# Alternative Services
-
-It is possible to negotiate protocols based on an established connection without
-exposure to downgrade.  The Alternative Services {{?ALTSVC=RFC7838}}
-bootstrapping in HTTP/3 does just that.  Assuming that HTTP/2 or HTTP/1.1 are
-not vulnerable to attacks that would compromise integrity, a server can
-advertise the presence of an endpoint that supports HTTP/3.
-
-Alternative Services is secure, but it has suboptimal performance.  A client
-could attempt the protocol it prefers most, but that comes at a risk that this
-protocol is not supported by a server.  A client could implement a fallback,
-which might even be performed concurrently (see {{?HAPPY-EYEBALLS=RFC6555}}),
-but this costs time and resources.  A client avoids these costs by attempting
-the protocol it believes to be most widely supported, though this comes with a
-performance penalty in cases where the most-preferred protocol is supported.
 
