@@ -34,7 +34,7 @@ one of several semantically-equivalent protocols to achieve their goals.  This
 is particularly notable in HTTP where there are currently three distinct
 protocols: HTTP/1.1 {{?HTTP11=I-D.ietf-httpbis-messaging}}, HTTP/2
 {{?HTTP2=RFC7540}}, and HTTP/3 {{?HTTP3=I-D.ietf-quic-http}}.  This is also true
-for protocols that support variants based on both TLS {{?TLS=RFC8446}} and DTLS
+of protocols that support variants based on both TLS {{?TLS=RFC8446}} and DTLS
 {{?DTLS=I-D.ietf-tls-dtls13}}.
 
 For protocols that are mutually compatible, Application-Layer Protocol
@@ -126,16 +126,27 @@ enum {
 A client that supports the extension advertises an empty extension.  In
 response, a server that supports this extension includes a list of application
 protocol identifiers.  The "extension_data" field of the value server extension
-uses the `ProtocolNameList` format defined in {{!ALPN}}.  This syntax is shown
-in {{fig-syntax}}.
+uses the `ProtocolName` type defined in {{!ALPN}}, which is repeated here.  This
+syntax is shown in {{fig-syntax}}.
 
 ~~~tls-syntax
+enum {
+  default(0), svcb(1), quic(2), (255)
+} ProtocolAuthenticationScope;
+
+opaque ProtocolName<1..2^8-1>;
+
+struct {
+  ProtocolAuthenticationScope scope;
+  ProtocolName protocol;
+} IncompatibleProtocol;
+
 struct {
   select (Handshake.msg_type) {
     case client_hello:
       Empty;
     case encrypted_extensions:
-      ProtocolNameList incompatible_protocols;
+      IncompatibleProtocol incompatible_protocols<3..2^16-1>;
   };
 } IncompatibleProtocols;
 ~~~
@@ -146,43 +157,118 @@ An implementation that receives this extension in any other handshake message
 MUST send a fatal illegal_parameter alert.
 
 A server deployment that supports multiple incompatible protocols MAY advertise
-all protocols that are supported.  A server MAY limit this to protocols that it
-considers to have similar semantics to protocols that the client lists in its
-application_layer_protocol_negotiation extension.
-
-The definition of what a server includes is intentionally loose.  It is better
-that a server offer more information than less as the needs of a client are not
-necessarily well reflected in its ALPN extension.  However, it is not reasonable
-to require that a server advertise all potential protocols as that is unlikely
-to be practical.
-
-A server MUST omit any compatible protocols from this extension on the
-understanding that the client will include compatible protocols in the
-application_layer_protocol_negotiation extension.
+all protocols that are supported.  Each protocol is paired with an identifier
+for the Protocol Authentication Scope, which defines how endpoints for that
+protocol might be discovered; see {{pas}}.
 
 A server needs to ensure that protocols advertised in this fashion are available
 to the client within the same protocol authentication scope.
 
+A server MUST omit any compatible protocols from this extension.  That is, any
+protocol that the server might be able to select, had the client offered the
+protocol in the application_layer_protocol_negotiation extension.  Clients are
+expected to include all compatible protocols in the
+application_layer_protocol_negotiation extension.
 
-# Protocol Authentication Scope
+A server MAY limit the incompatible protocols that it advertises to those that
+have similar semantics to protocols that the client lists in its
+application_layer_protocol_negotiation extension.
 
-The protocol authentication scope is the set of protocol endpoints at a server
-that share a protocol configuration.  A client learns of this scope as part of
-the process it follows to discover the server.
-
-By default, the protocol authentication scope is a single protocol endpoint.
-The default protocol authentication scope offers no means to authenticate
-incompatible protocols as it is not possible for a client to access any endpoint
-that supports those protocols.  A client cannot use information from the
-incompatible_protocols extension unless a wider scope is used.
-
-\[\[TODO: This likely needs some discussion.]]
+The definition of what a server includes is intentionally flexible.  It is
+better that a server offer more information than less as the needs of a client
+are not necessarily well reflected in its ALPN extension.  However, it might not
+be feasible for a server to advertise all potential protocols; see
+{{operational}} for more discussion on this point.
 
 
-## SVCB Discovery Scope
+# Incompatible Protocol Selection {#selection}
 
-For SVCB records, the protocol authentication scope is defined by the set of
-ServiceForm SVCB records with the same SvcDomainName.
+This document expands the definition of protocol negotiation to include both
+compatible and incompatible protocols and provide protection against downgrade
+for both types of selection.  ALPN {{?ALPN}} only considers compatible
+protocols: the client presents a set of compatible options and the server
+chooses its most preferred.
+
+With an selection of protocols that includes incompatible options, the client
+makes a selection between incompatible options before making a connection
+attempt.  Therefore, this design does not enable negotiation, it instead
+provides the client with information about other incompatible protocols that the
+server might support.
+
+Detecting a potential downgrade between incompatible protocols does not
+automatically imply that a client abandon a connection attempt.  It only
+provides the client with authenticated information about its options.  What a
+client does with this information is left to client policy.
+
+In brief:
+
+* For compatible protocols, the client offers all acceptable options and the
+  server selects its most preferred
+
+* For incompatible protocols, information the server offers is authenticated and
+  the client is able to act on that
+
+For a protocol like HTTP/3, this might not result in the client choosing to use
+HTTP/3, even if HTTP/3 is preferred and the server indicates that a service
+endpoint supporting HTTP/3 is available.  Blocking of UDP or QUIC is known to be
+widespread.  As a result, clients might adopt a policy of tolerating a downgrade
+to a TCP-based protocol, even if HTTP/3 were preferred.  However, as blocking of
+UDP is highly correlated by access network, clients that are able to establish
+HTTP/3 connections to some servers might choose to apply a stricter policy when
+a server that indicates HTTP/3 support is unreachable.
+
+
+# Protocol Authentication Scope {#pas}
+
+A protocol authentication scope includes a set of service endpoints that are
+provided downgrade protection by this mechanism.  There are multiple types of
+protocol authentication scope, each identified by a different type.  The type of
+protocol authentication scope is encoded in the `ProtocolAuthenticationScope`
+enum.
+
+The type of protocol authentication scope describes how a client might learn of
+all of the service endpoints that a server offers in that scope.  If a client
+has attempted to discover service endpoints using the methods defined by the
+protocol authentication scope, receiving an incompatible_protocols extension
+from a server is a strong indication of a potential downgrade attack.
+
+A client considers that a downgrade attack might have occurred if all of the
+following occur:
+
+1. A server advertises that there are endpoints that support a protocol that the
+   client prefers over the protocol that is currently in use.
+
+2. The protocol authentication scope associated with that protocol is understood
+   by the client and the client attempted to discover services in that
+   scope.
+
+In response to detecting a potential downgrade attack, a client might abandon
+the current connection attempt and report an error.  A client that supports
+discovery of incompatible protocols, but chooses not to make a discovery attempt
+under normal conditions might instead not fail, but it could use what it learns
+as cause to initiate discovery.
+
+
+## The Default Scope {#default}
+
+The default protocol authentication scope reserves an identifier of 0.  A client
+cannot act on information about incompatible protocols advertised with this
+scope.  A server MUST NOT advertise incompatible protocols with this scope;
+however, a client MUST ignore advertisements it receives.
+
+The default protocol authentication scope is reserved for discovery methods that
+have no explicit scope; see {{other}} for more on this subject.
+
+
+## SVCB Scope {#svcb}
+
+The SVCB protocol authentication scope uses an identifier of 1.  A server that
+lists incompatible protocols with this scope indicates that SVCB records
+ServiceForm records with the same SvcDomainName exist that refer to services
+that support the indicated protocol.
+
+The SVCB protocol authentication scope also applies to records that use the SVCB
+form, like HTTPS.
 
 This ensures that the final choice a client makes between ServiceForm SVCB
 records is protected by this extension.  If the client does not receive a SVCB
@@ -190,43 +276,24 @@ record for a protocol that the server includes in its incompatible_protocols
 extension, then it can assume that this omission was caused by an error or
 attack.
 
-Thus, for SVCB, a choice between AliasForm records (or CNAME or DNAME records)
-is not authenticated, but choices between ServiceForm records is.  This allows
-for server deployments for the same name to have different administrative
-control and protocol configurations.
+A choice between AliasForm records (or CNAME or DNAME records) is not
+authenticated, but choices between ServiceForm records is.  This allows for
+server deployments for the same name to have different administrative control
+and protocol configurations.
 
 
-## QUIC Version Negotiation
+## QUIC Version Negotiation Scope {#quic}
 
-TODO: define how this can be used to authenticate protocol choices where there
-are incompatible QUIC versions.
+The QUIC version negotiation protocol authentication scope uses an identifier of
+2.  A server that lists incompatible protocols with this scope indicates that
+QUIC version negotiation at the same server IP and port could be used to learn
+of incompatible QUIC versions that support the indicated protocol.
 
-
-## Alternative Services
-
-It is possible to negotiate protocols based on an established connection without
-exposure to downgrade.  The Alternative Services {{?ALTSVC=RFC7838}}
-bootstrapping in HTTP/3 does just that.  Assuming that HTTP/2 or HTTP/1.1 are
-not vulnerable to attacks that would compromise integrity, a server can
-advertise the presence of an endpoint that supports HTTP/3.
-
-Under these assumptions Alternative Services is secure, but it has performance
-trade-offs.  A client could attempt the protocol it prefers most, but that comes
-at a risk that this protocol is not supported by a server.  A client could
-implement a fallback, which might even be performed concurrently (see
-{{?HAPPY-EYEBALLS=RFC6555}}), but this costs time and resources.  A client
-avoids these costs by attempting the protocol it believes to be most widely
-supported, though this comes with a performance penalty in cases where the
-most-preferred protocol is supported.
-
-A server that is discovered using Alternative Services uses the default protocol
-authentication scope.  As use of Alternative Services is discretionary for both
-client and server, a client cannot expect to receive information about
-incompatible protocols.  To avoid downgrade, a client only has to avoid using an
-Alternative Service that offers a less-preferred protocol.
+Using this protocol authentication scope depends on application protocols that
+are dependent on a specific QUIC version.
 
 
-## Scope for Other Discovery Methods
+# Other Discovery Methods {#other}
 
 For other discovery methods, a definition for protocol authentication scope is
 needed before a client can act on what is learned using the
@@ -234,9 +301,9 @@ incompatible_protocols extension.  That definition needs to define how to
 discover server instances that support all incompatible protocols in the scope.
 
 In particular, a server that is discovered using forms of DNS-based name
-resolution other than SVCB uses the default protocol authentication scope.  This
-discovery method does not provide enough information to locate other
-incompatible protocols.
+resolution other than SVCB uses the default protocol authentication scope; see
+{{default}}.  Discovering services in this way does not provide enough
+information to locate other incompatible protocols.
 
 For instance, an HTTPS server that is discovered using purely A or AAAA records
 (and CNAME or DNAME records) might advertise support for incompatible protocols,
@@ -253,34 +320,56 @@ server that advertises a protocol that the client cannot discover risks this
 misconfiguration being identified as an attack by clients.
 
 
-# Incompatible Protocol Selection
+## Alternative Services
 
-This represents a different model for protocol selection than the one used by
-ALPN.  In ALPN, the client presents a set of (compatible) options and the server
-chooses its most preferred.
+It is possible to negotiate protocols based on an established connection without
+exposure to downgrade.  The Alternative Services {{?ALTSVC=RFC7838}}
+bootstrapping in HTTP/3 {{?HTTP3}} does just that.  Assuming that HTTP/2 or
+HTTP/1.1 are not vulnerable to attacks that would compromise integrity, a server
+can advertise the presence of an endpoint that supports HTTP/3.
 
-In comparison, as the client makes a selection between incompatible protocols
-before making a connection attempt, this design only provides the client with
-information about other incompatible protocols that the server might support.
-Any choice to attempt a connection using those protocols is left to the client.
+Under these assumptions Alternative Services is secure, but it has performance
+trade-offs.  A client could attempt the protocol it prefers most, but that comes
+at a risk that this protocol is not supported by a server.  A client could
+implement a fallback, which might even be performed concurrently (see
+{{?HAPPY-EYEBALLS=RFC6555}}), but this costs time and resources.  A client
+avoids these costs by attempting the protocol it believes to be most widely
+supported, though this comes with a performance penalty in cases where the
+most-preferred protocol is supported.
 
-In summary:
+A server that is discovered using Alternative Services uses the default protocol
+authentication scope.  As use of Alternative Services is discretionary for both
+client and server, a client cannot expect to receive information about
+incompatible protocols.  To avoid downgrade, a client only has to limit its use
+of Alternative Services to those that it prefers more than the active protocol.
 
-* For compatible protocols, the server chooses
 
-* For incompatible protocols, the client chooses
+# Operational Considerations {#operational}
 
-Detecting a potential downgrade between incompatible protocols does not
-automatically imply that a client abandon a connection attempt.  This is left to
-client policy.
+By listing incompatible protocols, a server does not indicate how to find
+endpoints that support those protocols, only that they exist.  This ensures that
+server configuration is minimized, as servers do not require tight coordination.
+Providing even this much information could present operational difficulties as
+it requires that incompatible protocols are only listed when those protocols are
+deployed.
 
-For a protocol like HTTP/3, this might not result in the client choosing to use
-HTTP/3, even if the server prefers that protocol.  Blocking of UDP or QUIC is
-known to be widespread.  As a result, clients might adopt a policy of tolerating
-a downgrade to a TCP-based protocol, even if HTTP/3 were preferred.  However, as
-blocking of UDP is highly correlated by access network, clients that are able to
-establish HTTP/3 connections to some servers might choose to apply a stricter
-response when a server that indicates HTTP/3 support is unreachable.
+Server deployments can choose not to provide information about incompatible
+protocols, which denies clients information about downgrade attacks but might
+avoid the operational complexity of providing accurate information.
+
+During rollout of a new, incompatible protocol, until the deployment is stable
+and not at risk of being disabled, servers SHOULD NOT advertise the existence of
+the new protocol.  Protocol deployments that are disabled, first need to be
+removed from the incompatible_protocols extension or there could be some loss of
+service.  Though the incompatible_protocols extension only applies at the time
+of the TLS handshake, clients might take some time to act on the information.
+If an incompatible protocol is removed from deployment between when the client
+completes a handshake and when it acts, this could be treated as an error by the
+client.
+
+If a server does not list available, incompatible protocols, clients cannot
+learn about other services and so cannot detect downgrade attacks against those
+protocols.
 
 
 # Security Considerations
@@ -302,9 +391,12 @@ instances.
 
 TODO: register the extension
 
+TODO: create a registry of scopes
+
 
 --- back
 
 # Acknowledgments
 
-
+Benjamin Schwartz provided significant input into the design of the mechanism
+and helped clarify many points.
