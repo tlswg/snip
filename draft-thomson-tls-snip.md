@@ -262,11 +262,11 @@ at a risk that this protocol is not supported by a server.  A client could
 implement a fallback, which might even be performed concurrently (see
 {{?HAPPY-EYEBALLS=RFC6555}}), but this costs time and resources.  A client
 avoids these costs by attempting the protocol it believes to be most widely
-supported, though this comes with a performance penalty in cases where the
+supported, though this might come with a performance penalty in cases where the
 most-preferred protocol is supported.
 
-A client therefore choose to ignore incompatible protocols when attempting to
-use an alternative service.
+A client can choose to ignore incompatible protocols when attempting to use an
+alternative service.
 
 
 # Operational Considerations {#operational}
