@@ -1,7 +1,7 @@
 ---
 title: "Secure Negotiation of Incompatible Protocols in TLS"
 abbrev: "Authenticating Incompatible Protocols"
-docname: draft-thomson-tls-snip-latest
+docname: draft-ietf-tls-snip-latest
 category: info
 ipr: trust200902
 

@@ -1,12 +1,21 @@
 # Secure Negotiation of Incompatible Protocols in TLS
 
-This is the working area for the individual Internet-Draft, "Secure Negotiation of Incompatible Protocols in TLS".
+This is the working area for the IETF [TLS Working Group](https://datatracker.ietf.org/wg/tls/documents/) Internet-Draft, "Secure Negotiation of Incompatible Protocols in TLS".
 
-* [Editor's Copy](https://martinthomson.github.io/snip/#go.draft-thomson-tls-snip.html)
-* [Individual Draft](https://tools.ietf.org/html/draft-thomson-tls-snip)
-* [Compare Editor's Copy to Individual Draft](https://martinthomson.github.io/snip/#go.draft-thomson-tls-snip.diff)
+* [Editor's Copy](https://martinthomson.github.io/snip/#go.draft-ietf-tls-snip.html)
+* [Working Group Draft](https://datatracker.ietf.org/doc/html/draft-ietf-tls-snip)
+* [Compare Editor's Copy to Working Group Draft](https://martinthomson.github.io/snip/#go.draft-ietf-tls-snip.diff)
 
-## Building the Draft
+
+## Contributing
+
+See the
+[guidelines for contributions](https://github.com/martinthomson/snip/blob/main/CONTRIBUTING.md).
+
+Contributions can be made by editing markdown through the GitHub interface.
+
+
+## Command Line Usage
 
 Formatted text and HTML versions of the draft can be built using `make`.
 
@@ -15,10 +24,5 @@ $ make
 ```
 
 This requires that you have the necessary software installed.  See
-[the instructions](https://github.com/martinthomson/i-d-template/blob/master/doc/SETUP.md).
+[the instructions](https://github.com/martinthomson/i-d-template/blob/main/doc/SETUP.md).
 
-
-## Contributing
-
-See the
-[guidelines for contributions](https://github.com/martinthomson/snip/blob/main/CONTRIBUTING.md).
