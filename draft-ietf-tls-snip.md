@@ -95,8 +95,9 @@ This is complementary to ALPN {{?ALPN}}, which only protects the negotiation of
 compatible protocols.  In ALPN, the client presents a set of compatible options
 and the server chooses its most preferred.
 
-For incompatible protocols, the server offers a list of incompatible protocols
-that it supports on the same logical server (see {{ls}}).
+This extension works by having a server offer a list of incompatible protocols
+that it supports on the same logical server (see {{ls}}).  How clients use this
+information will depend on client policy.
 
 
 ## Client Policy
@@ -176,6 +177,9 @@ This extension only applies to the ClientHello and EncryptedExtensions messages.
 An implementation that receives this extension in any other handshake message
 MUST send a fatal illegal_parameter alert.
 
+A client offers an empty extension to indicate that is wishes to receive
+information about incompatible protocols supported by the (logical) server.
+
 A server deployment that supports multiple incompatible protocols MAY advertise
 all protocols that are supported by the same logical server.  A server needs to
 ensure that protocols advertised in this fashion are available to the client.
@@ -185,6 +189,12 @@ protocol that the server might be able to select, had the client offered the
 protocol in the application_layer_protocol_negotiation extension.  In
 comparison, clients are expected to include all compatible protocols in the
 application_layer_protocol_negotiation extension.
+
+Information presented by the server is only valid at the time it is provided.  A
+client can act on that information immediately, but it cannot retain the
+information on the expectation that it will be valid later.  A server therefore
+only needs to consider providing information that is current for a period that
+would allow the client to act, which might amount to a few seconds.
 
 
 ## Validation
@@ -196,10 +206,11 @@ includes that protocol is a strong indication of a potential downgrade attack.
 In response to detecting a potential downgrade attack, a client might abandon
 the current connection attempt and report an error.
 
-A client that supports discovery of incompatible protocols, but chooses not to
-make a discovery attempt under normal conditions might instead not fail.  Such a
-client could instead make a connection attempt or initiate discovery if it
-discovers that a preferred incompatible protocol is available.
+A client might support an incompatible protocol, but chooses not to attempt its
+use under normal conditions might choose not to fail if it learns that the
+protocol is supported by the server.  This client might instead make a
+connection attempt or initiate discovery for that protocol when it learns that
+it is available.
 
 
 ## QUIC Version Negotiation {#quic}
