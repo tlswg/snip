@@ -33,9 +33,9 @@ With increased diversity in protocol choice, some applications are able to use
 one of several semantically-equivalent protocols to achieve their goals.  This
 is particularly notable in HTTP where there are currently three distinct
 protocols: HTTP/1.1 {{?HTTP11=I-D.ietf-httpbis-messaging}}, HTTP/2
-{{?HTTP2=RFC7540}}, and HTTP/3 {{?HTTP3=I-D.ietf-quic-http}}.  This is also true
-of protocols that support variants based on both TLS {{?TLS=RFC8446}} and DTLS
-{{?DTLS=I-D.ietf-tls-dtls13}}.
+{{?HTTP2=I-D.ietf-httpbis-http2bis}}, and HTTP/3 {{?HTTP3=I-D.ietf-quic-http}}.
+This is also true of protocols that support variants based on both TLS
+{{?TLS=RFC8446}} and DTLS {{?DTLS=I-D.ietf-tls-dtls13}}.
 
 For protocols that are mutually compatible, Application-Layer Protocol
 Negotiation (ALPN; {{?ALPN=RFC7301}}) provides a secure way to negotiate
@@ -54,12 +54,18 @@ TLS handshake.  The introduction of semantically-equivalent protocols that use
 incompatible handshakes introduces new opportunities for downgrade attack.  For
 instance, it is not possible to negotiate the use of HTTP/2 based on an attempt
 to connect using HTTP/3.  The former relies on TCP, whereas the latter uses UDP.
-These protocols are therefore mutually incompatible.
+These protocols are therefore mutually incompatible and ALPN cannot be used to
+securely select between the two.
 
 This document defines an extension to TLS that allows clients to discover when
 servers support alternative protocols that are incompatible with the
 currently-selected TLS version.  This might be used to avoid downgrade attack
 caused by interference in protocol discovery mechanisms.
+
+Downgrade protection for incompatible protocols only works for services provided
+by the same logical server (see {{ls}}). Consequently, the protection only
+applies to servers that operate from the same IP address and port number from
+the perspective of the client.
 
 This extension is motivated by the addition of new mechanisms, such as
 {{?SVCB=I-D.ietf-dnsop-svcb-httpssvc}}.  SVCB enables the discovery of servers
@@ -72,48 +78,65 @@ by other means.
 
 {::boilerplate bcp14}
 
-Two protocols are consider "compatible" if it is possible to negotiate either
+Two protocols are considered "compatible" if it is possible to negotiate either
 using the same connection attempt.  In comparison, protocols are "incompatible"
 if they require separate attempts to establish a connection.
 
 
-# Incompatible Protocols and SVCB
+# Incompatible Protocol Selection {#selection}
 
-The SVCB record {{?SVCB}} allows a client to learn about services associated
-with a domain name.  This includes how to locate a server, along with
-supplementary information about the server, including protocols that the server
-supports.  This allows a client to start using a protocol of their choice
-without added latency, as the lookup can be performed concurrently with other
-name resolution.  The added cost of the additional DNS queries is minimal.
+This document extends the authentication protections provided by TLS to cover
+negotiation of incompatible protocols.
 
-However, SVCB provides no protection against a downgrade attack between
-incompatible protocols.  An attacker could remove DNS records for
-client-preferred protocols, leaving the client to believe that only
-less-preferred options are available.  If those options are not compatible with
-the client-preferred option, the client will not know to attempt these. The
-client then only offers options compatible with the less-preferred options when
-attempting a TLS handshake.  Even if a client were to inform the server that it
-supports a more preferred protocol, the server would not be able to act upon it.
+This is complementary to ALPN {{?ALPN}}, which only protects the negotiation of
+compatible protocols.  In ALPN, the client presents a set of compatible options
+and the server chooses its most preferred.
 
-Authenticating all of the information presented in SVCB records might provide
-clients with complete information about server support, but this is impractical
-for several reasons:
-
-* it is not possible to ensure that all server instances in a deployment have
-  the same protocol configuration, as deployments for a single name routinely
-  include multiple providers that cannot coordinate closely;
-
-* the ability to provide a subset of valid DNS records is integral to many
-  strategies for managing servers; and
-
-* it is difficult to ensure that cached DNS records are synchronized with server
-  state.
-
-Overall, an authenticated TLS handshake is a better source of authoritative
-information about the protocols that are supported by servers.
+For incompatible protocols, the server offers a list of incompatible protocols
+that it supports on the same logical server (see {{ls}}).
 
 
-# Authenticating Incompatible Protocols
+## Client Policy
+
+A client has to choose between incompatible options before making a connection
+attempt.  Thefore, this document does not define a negotiation mechanism, it
+only provides authenticated information that a client can use.
+
+Importantly, detecting a potential downgrade between incompatible protocols does
+not automatically imply that a client abandon a connection attempt.  It only
+provides the client with authenticated information that can help with making a
+decision.  What a client does with this information is left to client policy.
+
+For a protocol like HTTP/3, this might not result in the client choosing to use
+HTTP/3, even if HTTP/3 is preferred and the server indicates that a service
+endpoint supporting HTTP/3 is available.  Blocking of UDP or QUIC is known to be
+widespread.  As a result, clients might adopt a policy of tolerating a downgrade
+to a TCP-based version of HTTP, even if HTTP/3 were preferred.  However, as
+blocking of UDP is highly correlated by access network, clients that are able to
+establish HTTP/3 connections to some servers might choose to apply a stricter
+policy when a server that indicates HTTP/3 support is unreachable.
+
+
+## Logical Servers {#ls}
+
+This document relies on the notion of a logical server for determining how a
+client interprets information about incompatible protocols.
+
+Clients can assume availability of incompatible protocols across the set of
+endpoints that share an IP version, IP address, and port number with the TLS
+server that provides the incompatible_protocols extension.
+
+This definition includes a port number that is independent of the protocol that
+is used.  Any protocol that defines a port number is considered to be
+equivalent.  In particular, incompatible protocols can be deployed to TCP, UDP,
+SCTP, or DCCP ports as long as the IP address and port number is the same.
+
+This determination is made from the perspective of a client.  This means that
+server operators need to be aware of all instances that might answer to the same
+IP address and port; see {{operational}}.
+
+
+# Authenticating Incompatible Protocols {#extension}
 
 The incompatible_protocols(TBD) TLS extension provides clients with information
 about the incompatible protocols that are supported by the same logical server;
@@ -127,12 +150,12 @@ enum {
 
 A client that supports the extension advertises an empty extension.  In
 response, a server that supports this extension includes a list of application
-protocol identifiers.  The "extension_data" field of the value server extension
-uses the `ProtocolName` type defined in {{!ALPN}}, which is repeated here.  This
-syntax is shown in {{fig-syntax}}.
+protocol identifiers.  The "extension_data" field of the server extension uses
+the `ProtocolName` type defined in {{!ALPN}}.  This syntax is shown in
+{{fig-syntax}}.
 
 ~~~tls-syntax
-opaque ProtocolName<1..2^8-1>;
+opaque ProtocolName<1..2^8-1>;  // From RFC 7301
 ProtocolName IncompatibleProtocol;
 
 struct {
@@ -161,109 +184,47 @@ comparison, clients are expected to include all compatible protocols in the
 application_layer_protocol_negotiation extension.
 
 
-# Incompatible Protocol Selection {#selection}
+## Validation
 
-This document expands the definition of protocol negotiation to include both
-compatible and incompatible protocols and provide protection against downgrade
-for both types of selection.  ALPN {{?ALPN}} only considers compatible
-protocols: the client presents a set of compatible options and the server
-chooses its most preferred.
-
-With an selection of protocols that includes incompatible options, the client
-makes a selection between incompatible options before making a connection
-attempt.  Therefore, this design does not enable negotiation, it instead
-provides the client with information about other incompatible protocols that the
-server might support.
-
-Detecting a potential downgrade between incompatible protocols does not
-automatically imply that a client abandon a connection attempt.  It only
-provides the client with authenticated information about its options.  What a
-client does with this information is left to client policy.
-
-In brief:
-
-* For compatible protocols, the client offers all acceptable options and the
-  server selects its most preferred
-
-* For incompatible protocols, information the server offers is authenticated and
-  the client is able to act on that
-
-For a protocol like HTTP/3, this might not result in the client choosing to use
-HTTP/3, even if HTTP/3 is preferred and the server indicates that a service
-endpoint supporting HTTP/3 is available.  Blocking of UDP or QUIC is known to be
-widespread.  As a result, clients might adopt a policy of tolerating a downgrade
-to a TCP-based protocol, even if HTTP/3 were preferred.  However, as blocking of
-UDP is highly correlated by access network, clients that are able to establish
-HTTP/3 connections to some servers might choose to apply a stricter policy when
-a server that indicates HTTP/3 support is unreachable.
-
-
-# Logical Servers {#ls}
-
-The set of endpoints over which clients can assume availability of incompatible
-protocols is the set of endpoints that share an IP version, IP address, and port
-number with the TLS server that provides the incompatible_protocols extension.
-
-This definition includes a port number that is independent of the protocol that
-is used.  Any protocol that defines a port number is considered to be
-equivalent.  In particular, incompatible protocols can be deployed to TCP, UDP,
-SCTP, or DCCP ports as long as the IP address and port number is the same.
-
-This determination is made from the perspective of a client.  This means that
-servers need to be aware of all instances that might answer to the same IP
-address and port; see {{operational}}.
-
-
-## Validation Process
-
-The type of protocol authentication scope describes how a client might learn of
-all of the service endpoints that a server offers in that scope.  If a client
-has attempted to discover service endpoints using the methods defined by the
-protocol authentication scope, receiving an incompatible_protocols extension
-from a server is a strong indication of a potential downgrade attack.
-
-A client considers that a downgrade attack might have occurred if a server
-advertises that there are endpoints that support a protocol that the client
-prefers over the protocol that is currently in use.
+If a client has discovered server endpoints for a preferred protocol that point
+to the same logical server, receiving an incompatible_protocols extension that
+includes that protocol is a strong indication of a potential downgrade attack.
 
 In response to detecting a potential downgrade attack, a client might abandon
-the current connection attempt and report an error.  A client that supports
-discovery of incompatible protocols, but chooses not to make a discovery attempt
-under normal conditions might instead not fail, but it could use what it learns
-as cause to initiate discovery.
+the current connection attempt and report an error.
+
+A client that supports discovery of incompatible protocols, but chooses not to
+make a discovery attempt under normal conditions might instead not fail.  Such a
+client could instead make a connection attempt or initiate discovery if it
+discovers that a preferred incompatible protocol is available.
 
 
 ## QUIC Version Negotiation {#quic}
 
-QUIC enables the definition of incompatible protocols that share a port.  This
-mechanism can be used to authenticate the choice of application protocol in
-QUIC.  QUIC version negotiation {{?QUIC-VN=I-D.ietf-quic-version-negotiation}}
-is used to authenticate the choice of QUIC version.
+QUIC enables the definition of incompatible protocols that share a port.  The
+incompatible_protocols extension can be used to authenticate the choice of
+application protocols across incompatible QUIC version.  QUIC version
+negotiation {{?QUIC-VN=I-D.ietf-quic-version-negotiation}} is used to
+authenticate the choice of QUIC version.
 
-As there are two potentially competing sets of preferences, clients need to set
-preferences for QUIC version and application protocol that do not result in
-inconsistent outcomes.  For example, if application protocol A exclusively uses
-QUIC version X and application protocol B exclusively uses QUIC version Y,
-setting a preference for both A and Y will lead to a failure condition that
-cannot be reconciled.
+As there are two potentially competing sets of preferences at different protocol
+layers, clients need to set preferences for QUIC version and application
+protocol are consistent.
+
+For example, if application protocol A exclusively uses QUIC version X and
+application protocol B exclusively uses QUIC version Y, setting a preference for
+both A and Y will result in one or other option not being selected.  This would
+result in failure if the client applied a policy that regarded either downgrade
+as an error.
 
 
-## Alternative Services
+## HTTP Alternative Services
 
-It is possible to negotiate protocols based on an established connection without
-exposure to downgrade.  The Alternative Services {{?ALTSVC=RFC7838}}
-bootstrapping in HTTP/3 {{?HTTP3}} does just that.  Assuming that HTTP/2 or
-HTTP/1.1 are not vulnerable to attacks that would compromise integrity, a server
-can advertise the presence of an endpoint that supports HTTP/3.
-
-Under these assumptions Alternative Services is secure, but it has performance
-trade-offs.  A client could attempt the protocol it prefers most, but that comes
-at a risk that this protocol is not supported by a server.  A client could
-implement a fallback, which might even be performed concurrently (see
-{{?HAPPY-EYEBALLS=RFC6555}}), but this costs time and resources.  A client
-avoids these costs by attempting the protocol it believes to be most widely
-supported, though this might come with a performance penalty in cases where the
-most-preferred protocol is supported.
+It is possible to select incompatible protocols based on an established
+connection.  The Alternative Services {{?ALTSVC=RFC7838}} bootstrapping in
+HTTP/3 {{?HTTP3}} is not vulnerable to downgrade as the signal is exchanged over
+an authenticated connection.  A server can advertise the presence of an endpoint
+that supports HTTP/3 using an HTTP/2 or HTTP/1.1 connection.
 
 A client can choose to ignore incompatible protocols when attempting to use an
 alternative service.
@@ -271,44 +232,74 @@ alternative service.
 
 # Operational Considerations {#operational}
 
-By listing incompatible protocols a server needs reliable knowledge of the
-existence of these alternatives.  This depends on some coordination of
-deployments.  In particular, coordination is important if a load balancer
-distributes load for a single IP address to multiple server instances.  Ensuring
-consistent configuration of servers could present operational difficulties as it
-requires that incompatible protocols are only listed when those protocols are
-deployed across all server instances.
+By listing incompatible protocols a server needs to be certain that the
+incompatible protocols are available.  Ensuring that this information is correct
+might need some amount of coordination in server deployments.  In particular,
+coordination is important if a load balancer distributes load for a single IP
+address to multiple server instances, or where anycast {{?BCP126}} is used.
+
+Incompatible protocols can only be listed in the incompatible_protocols
+extension when those protocols are deployed across all server instances.  A
+client might regard lack of availability for an advertised protocol as a
+downgrade attack, which could lead to service outages for those clients.
 
 Server deployments can choose not to provide information about incompatible
-protocols, which denies clients information about downgrade attacks but might
-avoid the operational complexity of providing accurate information.
+protocols might avoid the operational complexity of providing accurate
+information.  If a server does not list incompatible protocols, clients cannot
+gain authenticated information about their availability and so cannot detect
+downgrade attacks against those protocols.
 
 During rollout of a new, incompatible protocol, until the deployment is stable
 and not at risk of being disabled, servers SHOULD NOT advertise the existence of
-the new protocol.  Protocol deployments that are disabled, first need to be
-removed from the incompatible_protocols extension or there could be some loss of
-service.  Though the incompatible_protocols extension only applies at the time
-of the TLS handshake, clients might take some time to act on the information.
-If an incompatible protocol is removed from deployment between when the client
+the new protocol.
+
+Protocol deployments that are in the process of being disabled first need to be
+removed from the incompatible_protocols extension.  If a disabled protocol is
+advertised to clients, clients might regard this as a downgrade attack.  Though
+the incompatible_protocols extension only applies at the time of the TLS
+handshake, clients might take some time to act on the information.  If an
+incompatible protocol is removed from deployment between when the client
 completes a handshake and when it acts, this could be treated as an error by the
 client.
-
-If a server does not list incompatible protocols, clients cannot learn about
-other services and so cannot detect downgrade attacks against those protocols.
 
 
 # Security Considerations
 
 This design depends on the integrity of the TLS handshake across all forms,
 including TLS {{?RFC8446}}, DTLS {{?DTLS=I-D.ietf-tls-dtls13}}, and QUIC
-{{?QUIC-TLS=I-D.ietf-quic-tls}}.  An attacker that can modify a TLS handshake in
-any one of these protocols can cause a client to believe that other options do
-not exist.
+{{?QUIC-TLS=I-D.ietf-quic-tls}}.  Similarly, integrity is necessary across all
+TLS versions that a client is willing to negotiate.  An attacker that can modify
+a TLS handshake in any one of these protocols or versions can cause a client to
+believe that other options do not exist.
 
 
 # IANA Considerations
 
-TODO: register the extension
+IANA is requested to assign a new value from the "TLS ExtensionType Values" registry:
+
+Value:
+
+: TBD
+
+Extension Name:
+
+: incompatible_protocols
+
+TLS 1.3:
+
+: CH, EE
+
+DTLS-Only:
+
+: N
+
+Recommended:
+
+: Y
+
+Reference:
+
+: this document, {{extension}}
 
 
 --- back
@@ -322,9 +313,12 @@ and helped simplify the overall design.
 # Defining Logical Servers
 
 As incompatible protocols use different protocol stacks, they also use different
-endpoints. In other words, it is in many cases impossible for the exactly same
-endpoint to support multiple incompatible protocols.  Thus, it is necessary to
-understand the set of endpoints at a server that offer the incompatible protocols.
+endpoints. In other words, it is impossible for a single endpoint to support
+multiple incompatible protocols.  Thus, it is necessary to understand the set of
+endpoints at a server that offer the incompatible protocols.
+
+Thus, the definition of where incompatible protocols needs to encompass multiple
+endpoints somehow.
 
 A number of choices are possible here:
 
@@ -347,11 +341,48 @@ Having multiple service operators also rules out using SVCB ServiceMode records
 also as different records might be used to identify different operators.
 
 Hosts on the same IP address might work, but common deployment practices include
-use of different ports for entirely different services, which can have different
-operational constraints such as deployment schedules.  Including different ports
-in the same scope could force all services on the same host to support a
-consistent set of protocols.
+use of different ports for entirely different services.  These can have
+different operational constraints, such as deployment schedules.  Including
+different ports in the same scope could force all services on the same host to
+support a consistent set of protocols.
 
-This leaves IP and port.  There is always a risk that the same port number is
-used for completely different purposes depending on the choice of protocol, but
-this practice is sufficiently rare that it is not anticipated to be a problem.
+This leaves IP and port.  There is a risk that the same port number is used for
+completely different purposes depending on the choice of protocol.  This
+practice is sufficiently rare that it is not anticipated to be a problem.
+Finally, a deployment with no ability to coordinate the deployment of protocols
+that share an IP and port can choose not to advertise the availability of
+incompatible protocols.
+
+
+# Incompatible Protocols and SVCB
+
+The SVCB record {{?SVCB}} allows a client to learn about services associated
+with a domain name.  This includes how to locate a server, along with
+supplementary information about the server, including protocols that the server
+supports.  This allows a client to start using a protocol of their choice
+without added latency, as a query for SVCB records can be performed at the same
+time as name resolution.
+
+However, SVCB provides no protection against a downgrade attack between
+incompatible protocols.  An attacker could remove DNS records for protocols that
+the client prefers, leaving the client to believe that only less-preferred
+options are available.  If removed options are not compatible with the option
+that is chosen, the client will attempt those less-preferred options when
+attempting a TLS handshake.
+
+Authenticating all of the information presented in SVCB records might provide
+clients with complete information about server support, but this is impractical
+for several reasons:
+
+* it is not possible to ensure that all server instances in a deployment have
+  the same protocol configuration, as deployments for a single name routinely
+  include multiple providers that cannot coordinate closely;
+
+* the ability to provide a subset of valid DNS records is integral to many
+  strategies for managing servers; and
+
+* ensuring that cached DNS records are synchronized with server state is
+  challenging in a number of deployments.
+
+Overall, an authenticated TLS handshake is a better source of authoritative
+information.
