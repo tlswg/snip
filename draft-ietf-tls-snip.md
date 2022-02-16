@@ -49,29 +49,32 @@ server is aware of all options the client supports and including those options
 and the server choice under the integrity protection provided by the TLS
 handshake.
 
-This downgrade protection functions because protocol negotiation is part of the
-TLS handshake.  The introduction of semantically-equivalent protocols that use
-incompatible handshakes introduces new opportunities for downgrade attack.  For
-instance, it is not possible to negotiate the use of HTTP/2 based on an attempt
-to connect using HTTP/3.  The former relies on TCP, whereas the latter uses UDP.
-These protocols are therefore mutually incompatible and ALPN cannot be used to
-securely select between the two.
+Downgrade protection in ALPN functions because protocol negotiation is part of
+the TLS handshake.  The introduction of semantically-equivalent protocols that
+use incompatible handshakes introduces new opportunities for downgrade attack.
+For instance, it is not possible to negotiate the use of HTTP/2 based on an
+attempt to connect using HTTP/3.  The former relies on TCP, whereas the latter
+uses UDP.  These protocols are therefore mutually incompatible and ALPN cannot
+be used to securely select between the two.
 
-This document defines an extension to TLS that allows clients to discover when
-servers support alternative protocols that are incompatible with the
-currently-selected TLS version.  This might be used to avoid downgrade attack
-caused by interference in protocol discovery mechanisms.
+This document defines an extension to TLS that allows clients to discover when a
+server supports alternative protocols that are incompatible with the protocol in
+use.  This might be used to detect a downgrade attack.
 
 Downgrade protection for incompatible protocols only works for services provided
-by the same logical server (see {{ls}}). Consequently, the protection only
-applies to servers that operate from the same IP address and port number from
-the perspective of the client.
+by the same logical server (see {{ls}}). That is, the protection only applies to
+servers that operate from the same IP address and port number from the
+perspective of the client.
 
-This extension is motivated by the addition of new mechanisms, such as
-{{?SVCB=I-D.ietf-dnsop-svcb-httpssvc}}.  SVCB enables the discovery of servers
-that support multiple different protocols, some of which are incompatible.  The
-extension can also be used to authenticate protocol choices that are discovered
-by other means.
+This extension is motivated by the addition of new protocols such as HTTP/3
+{{HTTP3}} that are semantically equivalent, but incompatible with existing
+protocols.
+
+These downgrade protections are intended to work for any method that a client
+might use to discover that a server supports a particular protocol.  Special
+considerations for HTTP Alternative Services {{!ALTSVC}} is included in
+{{alt-svc}} and a discussion of SVCB {{?SVCB=I-D.ietf-dnsop-svcb-httpssvc}} can
+be found in {{svcb-dns}}.
 
 
 # Terminology
@@ -218,10 +221,10 @@ result in failure if the client applied a policy that regarded either downgrade
 as an error.
 
 
-## HTTP Alternative Services
+## HTTP Alternative Services {#alt-svc}
 
 It is possible to select incompatible protocols based on an established
-connection.  The Alternative Services {{?ALTSVC=RFC7838}} bootstrapping in
+connection.  The Alternative Services {{!ALTSVC=RFC7838}} bootstrapping in
 HTTP/3 {{?HTTP3}} is not vulnerable to downgrade as the signal is exchanged over
 an authenticated connection.  A server can advertise the presence of an endpoint
 that supports HTTP/3 using an HTTP/2 or HTTP/1.1 connection.
@@ -327,7 +330,8 @@ A number of choices are possible here:
 * The set of endpoints that are authoritative for the same "authority" as defined
   in RFC 3986 {{?URI=RFC3986}}, which is in effect domain name plus port number.
 
-* The set of endpoints that are referenced by the same SVCB ServiceMode record.
+* The set of endpoints that are referenced by the same SVCB ServiceMode record;
+  see {{Section 2.4.3 of ?SVCB}}.
 
 * The set of endpoints that share an IP address.
 
@@ -354,7 +358,7 @@ that share an IP and port can choose not to advertise the availability of
 incompatible protocols.
 
 
-# Incompatible Protocols and SVCB
+# Incompatible Protocols and SVCB {#svcb-dns}
 
 The SVCB record {{?SVCB}} allows a client to learn about services associated
 with a domain name.  This includes how to locate a server, along with
