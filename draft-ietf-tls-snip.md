@@ -177,6 +177,12 @@ This extension only applies to the ClientHello and EncryptedExtensions messages.
 An implementation that receives this extension in any other handshake message
 MUST send a fatal illegal_parameter alert.
 
+Clients and servers MUST include the application_layer_protocol_negotiation
+extension if they include an incompatible_protocols extension.  An endpoint that
+receives an incompatible_protocols extension without an
+application_layer_protocol_negotiation extension MUST send a fatal
+missing_extension alert.
+
 A client offers an empty extension to indicate that is wishes to receive
 information about incompatible protocols supported by the (logical) server.
 
