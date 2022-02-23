@@ -1,0 +1,114 @@
+{
+  "magic": "E!vIA5L86J2I",
+  "timestamp": "2020-11-01T00:22:15.105907+00:00",
+  "repo": "martinthomson/snip",
+  "labels": [
+    {
+      "name": "bug",
+      "description": "Something isn't working",
+      "color": "d73a4a"
+    },
+    {
+      "name": "documentation",
+      "description": "Improvements or additions to documentation",
+      "color": "0075ca"
+    },
+    {
+      "name": "duplicate",
+      "description": "This issue or pull request already exists",
+      "color": "cfd3d7"
+    },
+    {
+      "name": "enhancement",
+      "description": "New feature or request",
+      "color": "a2eeef"
+    },
+    {
+      "name": "help wanted",
+      "description": "Extra attention is needed",
+      "color": "008672"
+    },
+    {
+      "name": "good first issue",
+      "description": "Good for newcomers",
+      "color": "7057ff"
+    },
+    {
+      "name": "invalid",
+      "description": "This doesn't seem right",
+      "color": "e4e669"
+    },
+    {
+      "name": "question",
+      "description": "Further information is requested",
+      "color": "d876e3"
+    },
+    {
+      "name": "wontfix",
+      "description": "This will not be worked on",
+      "color": "ffffff"
+    }
+  ],
+  "issues": [
+    {
+      "number": 1,
+      "id": "MDU6SXNzdWU2NjQ4NTkxMjU=",
+      "title": "Suppressing discovery information",
+      "url": "https://github.com/martinthomson/snip/issues/1",
+      "state": "OPEN",
+      "author": "martinthomson",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Say a client discovers an HTTP server using an A record and so connects over HTTP/1.1 or HTTP/2, even if it supports HTTP/3 (leaving optimistic attempts to use HTTP/3 aside for this example).\r\n\r\nIf that server advertises availability of HTTP/3, can the client act on this information?\r\n\r\nAccording to the draft as written, the client cannot.  However, if the client supports SVCB (technically, the HTTPS record), it might reasonably assume that the server would not advertise HTTP/3 without also having provided some means of discovering it.  As framed, the server might have offered some other way of discovering this incompatible protocol, so the client cannot assume that the option to use HTTP/3 was the result of an attack that suppressed the SVCB record.  The client therefore cannot treat this as a potential attack.  That's not great.  It would be good if they could at least act.\r\n\r\n@bemasc suggests:\r\n\r\n> I think this draft should probably either name the scope or be specific to SVCB, to avoid cases where the scope is ambiguous.  Naming the scope, and providing a scope identifier meaning \"IP and port number\", would often be sufficient for secure QUIC upgrade without SVCB, at the cost of some conceptual complexity.\r\n\r\nI think that this reasonable.  There are a few options:\r\n\r\n1. Limit this to just SVCB.  That's simple and understandable, but it means that we can't use the mechanism for new things.   QUIC version negotiation has already been identified as something that might benefit from this.  And having to define a new mechanism for authentication of a new scheme is suboptimal.\r\n\r\n2. Have the client advertise what it believes the scope to be.  I included this for completeness, but I think that this doesn't help at all.  This requires that the server act, and the model here depends on client action.  \r\n\r\n3. Have the server advertise a single scope of applicability. The problem with this is that it makes it hard to know what the right scope is.  The server has to choose.  You could base this on information that the client provides, but I think that biases the outcome in ways that might be exploited by attacks.  I don't think that this is viable either.\r\n\r\n4. Have the server advertise multiple scopes of applicability.  There is two ways to spell this: as a set of scopes (IP+port, SVCB, QUIC-VN) or by recognizing that the goal is to define the union of sets and that most of the sets are subsets of others.  \r\n\r\nSo I think that I agree with Ben here.  It sounds like a single identifier would be good.  We could define just two values for the moment: IP+port and SVCB.  In this case, the first is understood to be a subset of the other so we don't need to define IP+port||SVCB as a separate codepoint.  We could recommend that every new scope defined include identifiers for all possible sets, either by being a superset or subset of other scopes or defining identifiers that combine the new scope with every other identifier.  \r\n\r\nThe problem with that approach is that introducing a new scope at the server causes old clients to lose protection, because they don't understand the old scopes.  So we need to go back to a set (or list).\r\n\r\nI tend to think that the number of scopes will be low, so I'm inclined to use a bitfield for this (16 bits seems like it is enough) so that we don't have to grapple with the complications that come with list parsing.  The minimum size is the same as `opaque<1..255>`, but it doesn't increase in size, so it is easier to process.",
+      "createdAt": "2020-07-24T01:25:31Z",
+      "updatedAt": "2020-07-28T04:30:14Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "bemasc",
+          "authorAssociation": "NONE",
+          "body": "> 2. Have the client advertise what it believes the scope to be. I included this for completeness, but I think that this doesn't help at all. This requires that the server act, and the model here depends on client action.\r\n\r\nI don't see why this doesn't work.  The server would reply with the list of ALPNs for that scope (maybe that's your #3).  However, I do see this as a metadata leak that would be worth avoiding.  It's nobody's business whether I'm using SVCB.\r\n\r\n> I'm inclined to use a bitfield for this\r\n\r\nLike this?\r\n```\r\nstruct {\r\n  uint16 scopes;\r\n  ProtocolName supported_protocol;\r\n} SPINEntry;\r\n\r\n\r\nSPINEntry SPINEntryList<4..2^16-1>;\r\n```\r\n\r\nI don't really see why that's better than\r\n```\r\nenum { ipport(1), svcb(2), (255) } SPINScope;\r\n\r\nstruct {\r\n  SPINScope spin_scope;\r\n  ProtocolNameList protocol_name_list;\r\n} SPINScopeEntry;\r\n\r\nSPINScopeEntry SPINScopeMap<3..2^16-1>;\r\n```\r\nbut this is a bike shed.",
+          "createdAt": "2020-07-24T02:13:24Z",
+          "updatedAt": "2020-07-24T02:13:24Z"
+        },
+        {
+          "author": "martinthomson",
+          "authorAssociation": "OWNER",
+          "body": "> I don't see why this doesn't work. \r\n\r\nOption 2 was only the client signaling anything.  Totally agree about the information leakage.  Option 2 was included for completeness, not because I thought it had any real chance :)  \r\n\r\nRegarding bikesheds, I was thinking this:\r\n\r\n```\r\nstruct {\r\n   uint16 scopes;\r\n   ProtocolNameList incompatible_protocols;\r\n} IncompatibleProtocols;\r\n```\r\n\r\nThat is mainly because it is slightly simpler.  I don't see sufficient reason to have different protocols supported over different scopes.  \r\n\r\nIn either case a client can decide that there is an attack if they are using a less-preferred protocol based purely on the intersection of the set of supported scopes and attempted discovery methods.  For the maximal spelling (your second one), the client might have to look at multiple sets and the server might need to repeat protocol names if they apply to multiple scopes (which I believe will be the common case).",
+          "createdAt": "2020-07-24T02:30:27Z",
+          "updatedAt": "2020-07-24T02:30:27Z"
+        },
+        {
+          "author": "bemasc",
+          "authorAssociation": "NONE",
+          "body": "> I don't see sufficient reason to have different protocols supported over different scopes.\r\n\r\nWell, consider this zone\r\n```zone\r\nsvc.example.net. 7200 IN HTTPS 2 . alpn=h2 port=8002\r\nsvc.example.net. 7200 IN HTTPS 1 . alpn=h3 no-default-alpn port=8003\r\n```\r\nThe SVCB scope contains \"http/1.1\", \"h2\", and \"h3\", but the IP-Port scope only contains one or the other, depending on which port you're talking to.  Are you saying that SPIN protection shouldn't apply in this case?  If so, I'm not sure why you need the bitfield at all; protection is always scoped to IP+port.\r\n\r\nBTW, given that the \"SVCB\" scope is actually \"TargetName\", which seems equivalent to \"IP\", another option would be to forgo the scope identifier and have a port number instead.\r\n\r\n```\r\nstruct {\r\n   uint16 port_number;\r\n   ProtocolNameList supported_protocols;\r\n} PortDescription;\r\n\r\nPortDescription SPINData<4..2^16-1>;\r\n```\r\n\r\nNow the meaning is fairly unambiguous, and the utility for cross-protocol upgrades is clear, without any external dependency.  Of course, this does assume the existence of port numbers.\r\n\r\n> For the maximal spelling (your second one), the client might have to look at multiple sets\r\n\r\nWhy?  Presumably it knows which discovery mechanism it used.  It only has to look for that one.\r\n\r\n> and the server might need to repeat protocol names if they apply to multiple scope\r\n\r\nYes, that's what I thought you were trying to avoid with the bitfield.  (I think we should probably worry about efficiency later.)",
+          "createdAt": "2020-07-24T15:27:38Z",
+          "updatedAt": "2020-07-24T15:27:38Z"
+        },
+        {
+          "author": "martinthomson",
+          "authorAssociation": "OWNER",
+          "body": "I'm not sure about dropping back to \"just include the port number\", because now you require that each server know more.  Not just that there are others, but where they are also.\r\n\r\n>> For the maximal spelling (your second one), the client might have to look at multiple sets\r\n>\r\n> Why? Presumably it knows which discovery mechanism it used. It only has to look for that one.\r\n\r\nBecause you might have tried multiple methods, and so any set that is for a method you tried is relevant to you.",
+          "createdAt": "2020-07-27T04:53:03Z",
+          "updatedAt": "2020-07-27T04:53:03Z"
+        },
+        {
+          "author": "bemasc",
+          "authorAssociation": "NONE",
+          "body": "> I'm not sure about dropping back to \"just include the port number\", because now you require that each server know more. Not just that there are others, but where they are also.\r\n\r\nWell, it would require that all the ports on one IP know what the other relevant ports are.  (I'm not sure I would call every port a separate \"server\".)  That seems like a much _easier_ coordination problem than getting servers to know the contents of the DNS records that might have been pointed at them.  Also, transient false negatives are OK.",
+          "createdAt": "2020-07-27T12:36:54Z",
+          "updatedAt": "2020-07-27T12:36:54Z"
+        },
+        {
+          "author": "martinthomson",
+          "authorAssociation": "OWNER",
+          "body": "Assuming that by \"transient false negatives\" you mean cases where the server for X doesn't advertise the presence of Y.  The same applies to other designs equally.  You only have problems if you falsely report the presence of a service that does not exist.",
+          "createdAt": "2020-07-28T04:30:14Z",
+          "updatedAt": "2020-07-28T04:30:14Z"
+        }
+      ]
+    }
+  ],
+  "pulls": []
+}
