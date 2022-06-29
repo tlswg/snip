@@ -4,8 +4,8 @@
 
 Network Working Group                                         M. Thomson
 Internet-Draft                                                   Mozilla
-Intended status: Informational                          16 February 2022
-Expires: 20 August 2022
+Intended status: Informational                              29 June 2022
+Expires: 31 December 2022
 
 
           Secure Negotiation of Incompatible Protocols in TLS
@@ -34,7 +34,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 20 August 2022.
+   This Internet-Draft will expire on 31 December 2022.
 
 Copyright Notice
 
@@ -231,6 +231,13 @@ Table of Contents
    extension in any other handshake message MUST send a fatal
    illegal_parameter alert.
 
+   Clients and servers MUST include the
+   application_layer_protocol_negotiation extension if they include an
+   incompatible_protocols extension.  An endpoint that receives an
+   incompatible_protocols extension without an
+   application_layer_protocol_negotiation extension MUST send a fatal
+   missing_extension alert.
+
    A client offers an empty extension to indicate that is wishes to
    receive information about incompatible protocols supported by the
    (logical) server.
@@ -408,9 +415,8 @@ Table of Contents
               2022, <https://datatracker.ietf.org/doc/html/draft-ietf-
               httpbis-http2bis-07>.
 
-   [HTTP3]    Bishop, M., "Hypertext Transfer Protocol Version 3
-              (HTTP/3)", Work in Progress, Internet-Draft, draft-ietf-
-              quic-http-34, 2 February 2021,
+   [HTTP3]    Bishop, M., "HTTP/3", Work in Progress, Internet-Draft,
+              draft-ietf-quic-http-34, 2 February 2021,
               <https://datatracker.ietf.org/doc/html/draft-ietf-quic-
               http-34>.
 
@@ -421,9 +427,9 @@ Table of Contents
 
    [QUIC-VN]  Schinazi, D. and E. Rescorla, "Compatible Version
               Negotiation for QUIC", Work in Progress, Internet-Draft,
-              draft-ietf-quic-version-negotiation-05, 25 October 2021,
+              draft-ietf-quic-version-negotiation-08, 8 June 2022,
               <https://datatracker.ietf.org/doc/html/draft-ietf-quic-
-              version-negotiation-05>.
+              version-negotiation-08>.
 
    [RFC8446]  Rescorla, E., "The Transport Layer Security (TLS) Protocol
               Version 1.3", RFC 8446, DOI 10.17487/RFC8446, August 2018,
@@ -540,5 +546,4 @@ Author's Address
 
    Martin Thomson
    Mozilla
-
    Email: mt@lowentropy.net
