@@ -35,10 +35,9 @@ authenticated.
 With increased diversity in protocol choice, some applications are able to use
 one of several semantically-equivalent protocols to achieve their goals.  This
 is particularly notable in HTTP where there are currently three distinct
-protocols: HTTP/1.1 {{?HTTP11=I-D.ietf-httpbis-messaging}}, HTTP/2
-{{?HTTP2=I-D.ietf-httpbis-http2bis}}, and HTTP/3 {{?HTTP3=I-D.ietf-quic-http}}.
-This is also true of protocols that support variants based on both TLS
-{{?TLS=RFC8446}} and DTLS {{?DTLS=I-D.ietf-tls-dtls13}}.
+protocols: HTTP/1.1 {{?HTTP11=RFC9112}}, HTTP/2 {{?HTTP2=RFC9113}}, and HTTP/3
+{{?HTTP3=RFC9114}}.  This is also true of protocols that support variants based
+on both TLS {{?TLS=RFC8446}} and DTLS {{?DTLS=I-D.ietf-tls-dtls13}}.
 
 For protocols that are mutually compatible, Application-Layer Protocol
 Negotiation (ALPN; {{?ALPN=RFC7301}}) provides a secure way to negotiate
@@ -48,17 +47,22 @@ In ALPN, the client offers a list of options in a TLS ClientHello and the server
 chooses the option that it most prefers.  A downgrade attack occurs where both
 client and server support a protocol that the server prefers more than than the
 selected protocol.  ALPN protects against this attack by ensuring that the
-server is aware of all options the client supports and including those options
-and the server choice under the integrity protection provided by the TLS
-handshake.
+options the client offers and the choice the server makes are included in the
+TLS handshake.  Confirming the TLS handshake then ensures that the client and
+server agree on both the offered options and the server choice, preventing an
+attacker from altering either.
 
-Downgrade protection in ALPN functions because protocol negotiation is part of
-the TLS handshake.  The introduction of semantically-equivalent protocols that
-use incompatible handshakes introduces new opportunities for downgrade attack.
-For instance, it is not possible to negotiate the use of HTTP/2 based on an
-attempt to connect using HTTP/3.  The former relies on TCP, whereas the latter
-uses UDP.  These protocols are therefore mutually incompatible and ALPN cannot
-be used to securely select between the two.
+The introduction of semantically-equivalent protocols that use incompatible
+handshakes introduces new opportunities for downgrade attack.  ALPN cannot be
+used to securely select between incompatible protocols.  For instance, it is not
+possible to negotiate the use of HTTP/2 based on an attempt to connect using
+HTTP/3.  The former relies on TCP, whereas the latter uses UDP.
+
+In this example, a client that attempts a connection with HTTP/2 cannot use ALPN
+to express that it might want to use HTTP/3.  The client needs to initiate a
+QUIC connection {{?QUIC=RFC9000}} if it wants to attempt HTTP/3.  Even if HTTP/3
+is preferred, an attacker need only block the HTTP/3 connection attempt to cause
+the client and server to use HTTP/2.
 
 This document defines an extension to TLS that allows clients to discover when a
 server supports alternative protocols that are incompatible with the protocol in
@@ -93,20 +97,22 @@ if they require separate attempts to establish a connection.
 This document extends the authentication protections provided by TLS to cover
 negotiation of incompatible protocols.
 
-This is complementary to ALPN {{?ALPN}}, which only protects the negotiation of
+This is complementary to ALPN {{?ALPN}}, which protects the negotiation of
 compatible protocols.  In ALPN, the client presents a set of compatible options
-and the server chooses its most preferred.
+and the server chooses its most preferred and the server chooses its most
+preferred.
 
 This extension works by having a server offer a list of incompatible protocols
-that it supports on the same logical server (see {{ls}}).  How clients use this
-information will depend on client policy.
+that are available for use on the same logical server (see {{ls}}).  How clients
+use this information will depend on client policy.
 
 
 ## Client Policy
 
 A client has to choose between incompatible options before making a connection
 attempt.  Thefore, this document does not define a negotiation mechanism, it
-only provides authenticated information that a client can use.
+only provides authenticated information that a client can use to validate
+information it acquires from other sources, such as {{SVCB}}.
 
 Importantly, detecting a potential downgrade between incompatible protocols does
 not automatically imply that a client abandon a connection attempt.  It only
@@ -185,7 +191,7 @@ receives an incompatible_protocols extension without an
 application_layer_protocol_negotiation extension MUST send a fatal
 missing_extension alert.
 
-A client offers an empty extension to indicate that is wishes to receive
+A client offers an empty extension to indicate that it wishes to receive
 information about incompatible protocols supported by the (logical) server.
 
 A server deployment that supports multiple incompatible protocols MAY advertise
@@ -209,18 +215,28 @@ would allow the client to act, which might amount to a few seconds.
 
 ## Validation
 
-If a client has discovered server endpoints for a preferred protocol that point
-to the same logical server, receiving an incompatible_protocols extension that
-includes that protocol is a strong indication of a potential downgrade attack.
+A client detects a likely downgrade attack if:
+
+* the client has discovered server endpoints for a preferred protocol that point
+  to a logical server,
+
+* an attempt to connect using the preferred protocol is unsuccessful,
+
+* an attempt to connect to the same logical server using a protocol that is
+  incompatible with the preferred protocol is successful, and
+
+* an incompatible_protocols extension that lists the preferred protocol is
+  received on the successful connection attempt.
 
 In response to detecting a potential downgrade attack, a client might abandon
 the current connection attempt and report an error.
 
-A client might support an incompatible protocol, but chooses not to attempt its
-use under normal conditions might choose not to fail if it learns that the
-protocol is supported by the server.  This client might instead make a
+These steps can occur in a different order.  For instance, a client might
+support an incompatible protocol, but choose not to attempt to make a connection
+with that protocol under normal conditions.  That client might instead make a
 connection attempt or initiate discovery for that protocol when it learns that
-it is available.
+the preferred protocol is available by some means.  Such a client then detects a
+downgrade attack when the connection attempt fails.
 
 
 ## QUIC Version Negotiation {#quic}
@@ -250,7 +266,7 @@ HTTP/3 {{?HTTP3}} is not vulnerable to downgrade as the signal is exchanged over
 an authenticated connection.  A server can advertise the presence of an endpoint
 that supports HTTP/3 using an HTTP/2 or HTTP/1.1 connection.
 
-A client can choose to ignore incompatible protocols when attempting to use an
+A client MAY choose to ignore incompatible protocols when attempting to use an
 alternative service.
 
 
@@ -344,7 +360,7 @@ endpoints at a server that offer the incompatible protocols.
 Thus, the definition of where incompatible protocols needs to encompass multiple
 endpoints somehow.
 
-A number of choices are possible here:
+A number of choices are possible here (this list is not exhaustive):
 
 * The set of endpoints that are authoritative for the same domain name.
 
@@ -371,9 +387,9 @@ different operational constraints, such as deployment schedules.  Including
 different ports in the same scope could force all services on the same host to
 support a consistent set of protocols.
 
-This leaves IP and port.  There is a risk that the same port number is used for
-completely different purposes depending on the choice of protocol.  This
-practice is sufficiently rare that it is not anticipated to be a problem.
-Finally, a deployment with no ability to coordinate the deployment of protocols
-that share an IP and port can choose not to advertise the availability of
+This leaves IP and port.  There is still a risk that the same port number is
+used for completely different purposes depending on the choice of protocol.
+This practice is sufficiently rare that it is not anticipated to be a problem.
+A deployment with no ability to coordinate the deployment of protocols that
+share an IP and port can choose not to advertise the availability of
 incompatible protocols.
