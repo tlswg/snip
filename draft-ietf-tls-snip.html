@@ -1356,11 +1356,13 @@ information about incompatible protocols supported by the (logical) server.<a hr
 <p id="section-4-8">A server deployment that supports multiple incompatible protocols MAY advertise
 all protocols that are supported by the same logical server.  A server needs to
 ensure that protocols advertised in this fashion are available to the client.<a href="#section-4-8" class="pilcrow">¶</a></p>
-<p id="section-4-9">A server MUST omit any compatible protocols from this extension.  That is, any
+<p id="section-4-9">A server SHOULD omit any compatible protocols from this extension.  That is, any
 protocol that the server might be able to select, had the client offered the
 protocol in the application_layer_protocol_negotiation extension.  In
 comparison, clients are expected to include all compatible protocols in the
-application_layer_protocol_negotiation extension.<a href="#section-4-9" class="pilcrow">¶</a></p>
+application_layer_protocol_negotiation extension.  This recommendation exists
+only so that implementations choose a consistent - and smaller - encoding;
+clients MUST NOT abort a handshake if the server lists a compatible protocol.<a href="#section-4-9" class="pilcrow">¶</a></p>
 <p id="section-4-10">Information presented by the server is only valid at the time it is provided.  A
 client can act on that information immediately, but it cannot retain the
 information on the expectation that it will be valid later.  A server therefore

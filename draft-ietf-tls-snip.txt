@@ -247,12 +247,15 @@ Table of Contents
    server.  A server needs to ensure that protocols advertised in this
    fashion are available to the client.
 
-   A server MUST omit any compatible protocols from this extension.
+   A server SHOULD omit any compatible protocols from this extension.
    That is, any protocol that the server might be able to select, had
    the client offered the protocol in the
    application_layer_protocol_negotiation extension.  In comparison,
    clients are expected to include all compatible protocols in the
-   application_layer_protocol_negotiation extension.
+   application_layer_protocol_negotiation extension.  This
+   recommendation exists only so that implementations choose a
+   consistent - and smaller - encoding; clients MUST NOT abort a
+   handshake if the server lists a compatible protocol.
 
    Information presented by the server is only valid at the time it is
    provided.  A client can act on that information immediately, but it
