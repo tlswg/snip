@@ -15,6 +15,9 @@ author:
     org: Mozilla
     email: mt@lowentropy.net
 
+informative:
+  SVCB: I-D.ietf-dnsop-svcb-https
+
 
 --- abstract
 
@@ -73,8 +76,7 @@ protocols.
 These downgrade protections are intended to work for any method that a client
 might use to discover that a server supports a particular protocol.  Special
 considerations for HTTP Alternative Services {{!ALTSVC}} is included in
-{{alt-svc}} and a discussion of SVCB {{?SVCB=I-D.ietf-dnsop-svcb-httpssvc}} can
-be found in {{svcb-dns}}.
+{{alt-svc}}.
 
 
 # Terminology
@@ -350,7 +352,7 @@ A number of choices are possible here:
   in RFC 3986 {{?URI=RFC3986}}, which is in effect domain name plus port number.
 
 * The set of endpoints that are referenced by the same SVCB ServiceMode record;
-  see {{Section 2.4.3 of ?SVCB}}.
+  see {{Section 2.4.3 of SVCB}}.
 
 * The set of endpoints that share an IP address.
 
@@ -375,37 +377,3 @@ practice is sufficiently rare that it is not anticipated to be a problem.
 Finally, a deployment with no ability to coordinate the deployment of protocols
 that share an IP and port can choose not to advertise the availability of
 incompatible protocols.
-
-
-# Incompatible Protocols and SVCB {#svcb-dns}
-
-The SVCB record {{?SVCB}} allows a client to learn about services associated
-with a domain name.  This includes how to locate a server, along with
-supplementary information about the server, including protocols that the server
-supports.  This allows a client to start using a protocol of their choice
-without added latency, as a query for SVCB records can be performed at the same
-time as name resolution.
-
-However, SVCB provides no protection against a downgrade attack between
-incompatible protocols.  An attacker could remove DNS records for protocols that
-the client prefers, leaving the client to believe that only less-preferred
-options are available.  If removed options are not compatible with the option
-that is chosen, the client will attempt those less-preferred options when
-attempting a TLS handshake.
-
-Authenticating all of the information presented in SVCB records might provide
-clients with complete information about server support, but this is impractical
-for several reasons:
-
-* it is not possible to ensure that all server instances in a deployment have
-  the same protocol configuration, as deployments for a single name routinely
-  include multiple providers that cannot coordinate closely;
-
-* the ability to provide a subset of valid DNS records is integral to many
-  strategies for managing servers; and
-
-* ensuring that cached DNS records are synchronized with server state is
-  challenging in a number of deployments.
-
-Overall, an authenticated TLS handshake is a better source of authoritative
-information.
