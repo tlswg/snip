@@ -1176,10 +1176,7 @@ authenticated.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.10.1"><a href="#appendix-B" class="xref">Appendix B</a>.  <a href="#name-defining-logical-servers" class="xref">Defining Logical Servers</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#appendix-C" class="xref">Appendix C</a>.  <a href="#name-incompatible-protocols-and-" class="xref">Incompatible Protocols and SVCB</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#appendix-D" class="xref"></a><a href="#name-authors-address" class="xref">Author's Address</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#appendix-C" class="xref"></a><a href="#name-authors-address" class="xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1227,8 +1224,7 @@ protocols.<a href="#section-1-7" class="pilcrow">¶</a></p>
 <p id="section-1-8">These downgrade protections are intended to work for any method that a client
 might use to discover that a server supports a particular protocol.  Special
 considerations for HTTP Alternative Services <span>[<a href="#ALTSVC" class="xref">ALTSVC</a>]</span> is included in
-<a href="#alt-svc" class="xref">Section 4.3</a> and a discussion of SVCB <span>[<a href="#SVCB" class="xref">SVCB</a>]</span> can
-be found in <a href="#svcb-dns" class="xref">Appendix C</a>.<a href="#section-1-8" class="pilcrow">¶</a></p>
+<a href="#alt-svc" class="xref">Section 4.3</a>.<a href="#section-1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="terminology">
@@ -1574,7 +1570,7 @@ believe that other options do not exist.<a href="#section-6-1" class="pilcrow">�
 <dd class="break"></dd>
 <dt id="SVCB">[SVCB]</dt>
         <dd>
-<span class="refAuthor">Schwartz, B.</span>, <span class="refAuthor">Bishop, M.</span>, and <span class="refAuthor">E. Nygren</span>, <span class="refTitle">"Service binding and parameter specification via the DNS (DNS SVCB and HTTPSSVC)"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-dnsop-svcb-httpssvc-03</span>, <time datetime="2020-06-11" class="refDate">11 June 2020</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-dnsop-svcb-httpssvc-03">https://datatracker.ietf.org/doc/html/draft-ietf-dnsop-svcb-httpssvc-03</a>&gt;</span>. </dd>
+<span class="refAuthor">Schwartz, B.</span>, <span class="refAuthor">Bishop, M.</span>, and <span class="refAuthor">E. Nygren</span>, <span class="refTitle">"Service binding and parameter specification via the DNS (DNS SVCB and HTTPS RRs)"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-dnsop-svcb-https-10</span>, <time datetime="2022-05-24" class="refDate">24 May 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-dnsop-svcb-https-10">https://datatracker.ietf.org/doc/html/draft-ietf-dnsop-svcb-https-10</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="TLS">[TLS]</dt>
         <dd>
@@ -1615,7 +1611,7 @@ endpoints somehow.<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 in RFC 3986 <span>[<a href="#URI" class="xref">URI</a>]</span>, which is in effect domain name plus port number.<a href="#appendix-B-4.2" class="pilcrow">¶</a>
 </li>
         <li class="normal" id="appendix-B-4.3">The set of endpoints that are referenced by the same SVCB ServiceMode record;
-see <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-dnsop-svcb-httpssvc-03#section-2.4.3" class="relref">Section 2.4.3</a> of [<a href="#SVCB" class="xref">SVCB</a>]</span>.<a href="#appendix-B-4.3" class="pilcrow">¶</a>
+see <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-dnsop-svcb-https-10#section-2.4.3" class="relref">Section 2.4.3</a> of [<a href="#SVCB" class="xref">SVCB</a>]</span>.<a href="#appendix-B-4.3" class="pilcrow">¶</a>
 </li>
         <li class="normal" id="appendix-B-4.4">The set of endpoints that share an IP address.<a href="#appendix-B-4.4" class="pilcrow">¶</a>
 </li>
@@ -1640,44 +1636,8 @@ that share an IP and port can choose not to advertise the availability of
 incompatible protocols.<a href="#appendix-B-8" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="svcb-dns">
-<section id="appendix-C">
-      <h2 id="name-incompatible-protocols-and-">
-<a href="#appendix-C" class="section-number selfRef">Appendix C. </a><a href="#name-incompatible-protocols-and-" class="section-name selfRef">Incompatible Protocols and SVCB</a>
-      </h2>
-<p id="appendix-C-1">The SVCB record <span>[<a href="#SVCB" class="xref">SVCB</a>]</span> allows a client to learn about services associated
-with a domain name.  This includes how to locate a server, along with
-supplementary information about the server, including protocols that the server
-supports.  This allows a client to start using a protocol of their choice
-without added latency, as a query for SVCB records can be performed at the same
-time as name resolution.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
-<p id="appendix-C-2">However, SVCB provides no protection against a downgrade attack between
-incompatible protocols.  An attacker could remove DNS records for protocols that
-the client prefers, leaving the client to believe that only less-preferred
-options are available.  If removed options are not compatible with the option
-that is chosen, the client will attempt those less-preferred options when
-attempting a TLS handshake.<a href="#appendix-C-2" class="pilcrow">¶</a></p>
-<p id="appendix-C-3">Authenticating all of the information presented in SVCB records might provide
-clients with complete information about server support, but this is impractical
-for several reasons:<a href="#appendix-C-3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="appendix-C-4.1">it is not possible to ensure that all server instances in a deployment have
-the same protocol configuration, as deployments for a single name routinely
-include multiple providers that cannot coordinate closely;<a href="#appendix-C-4.1" class="pilcrow">¶</a>
-</li>
-        <li class="normal" id="appendix-C-4.2">the ability to provide a subset of valid DNS records is integral to many
-strategies for managing servers; and<a href="#appendix-C-4.2" class="pilcrow">¶</a>
-</li>
-        <li class="normal" id="appendix-C-4.3">ensuring that cached DNS records are synchronized with server state is
-challenging in a number of deployments.<a href="#appendix-C-4.3" class="pilcrow">¶</a>
-</li>
-      </ul>
-<p id="appendix-C-5">Overall, an authenticated TLS handshake is a better source of authoritative
-information.<a href="#appendix-C-5" class="pilcrow">¶</a></p>
-</section>
-</div>
 <div id="authors-addresses">
-<section id="appendix-D">
+<section id="appendix-C">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>

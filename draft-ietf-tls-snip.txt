@@ -69,7 +69,6 @@ Table of Contents
      8.2.  Informative References
    Appendix A.  Acknowledgments
    Appendix B.  Defining Logical Servers
-   Appendix C.  Incompatible Protocols and SVCB
    Author's Address
 
 1.  Introduction
@@ -120,8 +119,7 @@ Table of Contents
    These downgrade protections are intended to work for any method that
    a client might use to discover that a server supports a particular
    protocol.  Special considerations for HTTP Alternative Services
-   [ALTSVC] is included in Section 4.3 and a discussion of SVCB [SVCB]
-   can be found in Appendix C.
+   [ALTSVC] is included in Section 4.3.
 
 2.  Terminology
 
@@ -440,10 +438,10 @@ Table of Contents
 
    [SVCB]     Schwartz, B., Bishop, M., and E. Nygren, "Service binding
               and parameter specification via the DNS (DNS SVCB and
-              HTTPSSVC)", Work in Progress, Internet-Draft, draft-ietf-
-              dnsop-svcb-httpssvc-03, 11 June 2020,
+              HTTPS RRs)", Work in Progress, Internet-Draft, draft-ietf-
+              dnsop-svcb-https-10, 24 May 2022,
               <https://datatracker.ietf.org/doc/html/draft-ietf-dnsop-
-              svcb-httpssvc-03>.
+              svcb-https-10>.
 
    [TLS]      Rescorla, E., "The Transport Layer Security (TLS) Protocol
               Version 1.3", RFC 8446, DOI 10.17487/RFC8446, August 2018,
@@ -509,41 +507,6 @@ Appendix B.  Defining Logical Servers
    to coordinate the deployment of protocols that share an IP and port
    can choose not to advertise the availability of incompatible
    protocols.
-
-Appendix C.  Incompatible Protocols and SVCB
-
-   The SVCB record [SVCB] allows a client to learn about services
-   associated with a domain name.  This includes how to locate a server,
-   along with supplementary information about the server, including
-   protocols that the server supports.  This allows a client to start
-   using a protocol of their choice without added latency, as a query
-   for SVCB records can be performed at the same time as name
-   resolution.
-
-   However, SVCB provides no protection against a downgrade attack
-   between incompatible protocols.  An attacker could remove DNS records
-   for protocols that the client prefers, leaving the client to believe
-   that only less-preferred options are available.  If removed options
-   are not compatible with the option that is chosen, the client will
-   attempt those less-preferred options when attempting a TLS handshake.
-
-   Authenticating all of the information presented in SVCB records might
-   provide clients with complete information about server support, but
-   this is impractical for several reasons:
-
-   *  it is not possible to ensure that all server instances in a
-      deployment have the same protocol configuration, as deployments
-      for a single name routinely include multiple providers that cannot
-      coordinate closely;
-
-   *  the ability to provide a subset of valid DNS records is integral
-      to many strategies for managing servers; and
-
-   *  ensuring that cached DNS records are synchronized with server
-      state is challenging in a number of deployments.
-
-   Overall, an authenticated TLS handshake is a better source of
-   authoritative information.
 
 Author's Address
 
