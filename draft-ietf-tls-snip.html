@@ -1033,7 +1033,7 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Thomson</td>
-<td class="center">Expires 31 December 2022</td>
+<td class="center">Expires 1 January 2023</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1046,12 +1046,12 @@ svg :is([stroke="fill"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-ietf-tls-snip-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2022-06-29" class="published">29 June 2022</time>
+<time datetime="2022-06-30" class="published">30 June 2022</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2022-12-31">31 December 2022</time></dd>
+<dd class="expires"><time datetime="2023-01-01">1 January 2023</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1089,7 +1089,7 @@ authenticated.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 31 December 2022.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 1 January 2023.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1190,10 +1190,9 @@ authenticated.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 <p id="section-1-1">With increased diversity in protocol choice, some applications are able to use
 one of several semantically-equivalent protocols to achieve their goals.  This
 is particularly notable in HTTP where there are currently three distinct
-protocols: HTTP/1.1 <span>[<a href="#HTTP11" class="xref">HTTP11</a>]</span>, HTTP/2
-<span>[<a href="#HTTP2" class="xref">HTTP2</a>]</span>, and HTTP/3 <span>[<a href="#HTTP3" class="xref">HTTP3</a>]</span>.
-This is also true of protocols that support variants based on both TLS
-<span>[<a href="#TLS" class="xref">TLS</a>]</span> and DTLS <span>[<a href="#DTLS" class="xref">DTLS</a>]</span>.<a href="#section-1-1" class="pilcrow">¶</a></p>
+protocols: HTTP/1.1 <span>[<a href="#HTTP11" class="xref">HTTP11</a>]</span>, HTTP/2 <span>[<a href="#HTTP2" class="xref">HTTP2</a>]</span>, and HTTP/3
+<span>[<a href="#HTTP3" class="xref">HTTP3</a>]</span>.  This is also true of protocols that support variants based
+on both TLS <span>[<a href="#TLS" class="xref">TLS</a>]</span> and DTLS <span>[<a href="#DTLS" class="xref">DTLS</a>]</span>.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">For protocols that are mutually compatible, Application-Layer Protocol
 Negotiation (ALPN; <span>[<a href="#ALPN" class="xref">ALPN</a>]</span>) provides a secure way to negotiate
 protocol selection.<a href="#section-1-2" class="pilcrow">¶</a></p>
@@ -1201,30 +1200,34 @@ protocol selection.<a href="#section-1-2" class="pilcrow">¶</a></p>
 chooses the option that it most prefers.  A downgrade attack occurs where both
 client and server support a protocol that the server prefers more than than the
 selected protocol.  ALPN protects against this attack by ensuring that the
-server is aware of all options the client supports and including those options
-and the server choice under the integrity protection provided by the TLS
-handshake.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">Downgrade protection in ALPN functions because protocol negotiation is part of
-the TLS handshake.  The introduction of semantically-equivalent protocols that
-use incompatible handshakes introduces new opportunities for downgrade attack.
-For instance, it is not possible to negotiate the use of HTTP/2 based on an
-attempt to connect using HTTP/3.  The former relies on TCP, whereas the latter
-uses UDP.  These protocols are therefore mutually incompatible and ALPN cannot
-be used to securely select between the two.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">This document defines an extension to TLS that allows clients to discover when a
+options the client offers and the choice the server makes are included in the
+TLS handshake.  Confirming the TLS handshake then ensures that the client and
+server agree on both the offered options and the server choice, preventing an
+attacker from altering either.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">The introduction of semantically-equivalent protocols that use incompatible
+handshakes introduces new opportunities for downgrade attack.  ALPN cannot be
+used to securely select between incompatible protocols.  For instance, it is not
+possible to negotiate the use of HTTP/2 based on an attempt to connect using
+HTTP/3.  The former relies on TCP, whereas the latter uses UDP.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">In this example, a client that attempts a connection with HTTP/2 cannot use ALPN
+to express that it might want to use HTTP/3.  The client needs to initiate a
+QUIC connection <span>[<a href="#QUIC" class="xref">QUIC</a>]</span> if it wants to attempt HTTP/3.  Even if HTTP/3
+is preferred, an attacker need only block the HTTP/3 connection attempt to cause
+the client and server to use HTTP/2.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">This document defines an extension to TLS that allows clients to discover when a
 server supports alternative protocols that are incompatible with the protocol in
-use.  This might be used to detect a downgrade attack.<a href="#section-1-5" class="pilcrow">¶</a></p>
-<p id="section-1-6">Downgrade protection for incompatible protocols only works for services provided
+use.  This might be used to detect a downgrade attack.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-7">Downgrade protection for incompatible protocols only works for services provided
 by the same logical server (see <a href="#ls" class="xref">Section 3.2</a>). That is, the protection only applies to
 servers that operate from the same IP address and port number from the
-perspective of the client.<a href="#section-1-6" class="pilcrow">¶</a></p>
-<p id="section-1-7">This extension is motivated by the addition of new protocols such as HTTP/3
+perspective of the client.<a href="#section-1-7" class="pilcrow">¶</a></p>
+<p id="section-1-8">This extension is motivated by the addition of new protocols such as HTTP/3
 <span>[<a href="#HTTP3" class="xref">HTTP3</a>]</span> that are semantically equivalent, but incompatible with existing
-protocols.<a href="#section-1-7" class="pilcrow">¶</a></p>
-<p id="section-1-8">These downgrade protections are intended to work for any method that a client
+protocols.<a href="#section-1-8" class="pilcrow">¶</a></p>
+<p id="section-1-9">These downgrade protections are intended to work for any method that a client
 might use to discover that a server supports a particular protocol.  Special
 considerations for HTTP Alternative Services <span>[<a href="#ALTSVC" class="xref">ALTSVC</a>]</span> is included in
-<a href="#alt-svc" class="xref">Section 4.3</a>.<a href="#section-1-8" class="pilcrow">¶</a></p>
+<a href="#alt-svc" class="xref">Section 4.3</a>.<a href="#section-1-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="terminology">
@@ -1249,12 +1252,13 @@ if they require separate attempts to establish a connection.<a href="#section-2-
       </h2>
 <p id="section-3-1">This document extends the authentication protections provided by TLS to cover
 negotiation of incompatible protocols.<a href="#section-3-1" class="pilcrow">¶</a></p>
-<p id="section-3-2">This is complementary to ALPN <span>[<a href="#ALPN" class="xref">ALPN</a>]</span>, which only protects the negotiation of
+<p id="section-3-2">This is complementary to ALPN <span>[<a href="#ALPN" class="xref">ALPN</a>]</span>, which protects the negotiation of
 compatible protocols.  In ALPN, the client presents a set of compatible options
-and the server chooses its most preferred.<a href="#section-3-2" class="pilcrow">¶</a></p>
+and the server chooses its most preferred and the server chooses its most
+preferred.<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">This extension works by having a server offer a list of incompatible protocols
-that it supports on the same logical server (see <a href="#ls" class="xref">Section 3.2</a>).  How clients use this
-information will depend on client policy.<a href="#section-3-3" class="pilcrow">¶</a></p>
+that are available for use on the same logical server (see <a href="#ls" class="xref">Section 3.2</a>).  How clients
+use this information will depend on client policy.<a href="#section-3-3" class="pilcrow">¶</a></p>
 <div id="client-policy">
 <section id="section-3.1">
         <h3 id="name-client-policy">
@@ -1262,7 +1266,8 @@ information will depend on client policy.<a href="#section-3-3" class="pilcrow">
         </h3>
 <p id="section-3.1-1">A client has to choose between incompatible options before making a connection
 attempt.  Thefore, this document does not define a negotiation mechanism, it
-only provides authenticated information that a client can use.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+only provides authenticated information that a client can use to validate
+information it acquires from other sources, such as <span>[<a href="#SVCB" class="xref">SVCB</a>]</span>.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
 <p id="section-3.1-2">Importantly, detecting a potential downgrade between incompatible protocols does
 not automatically imply that a client abandon a connection attempt.  It only
 provides the client with authenticated information that can help with making a
@@ -1347,7 +1352,7 @@ extension if they include an incompatible_protocols extension.  An endpoint that
 receives an incompatible_protocols extension without an
 application_layer_protocol_negotiation extension MUST send a fatal
 missing_extension alert.<a href="#section-4-6" class="pilcrow">¶</a></p>
-<p id="section-4-7">A client offers an empty extension to indicate that is wishes to receive
+<p id="section-4-7">A client offers an empty extension to indicate that it wishes to receive
 information about incompatible protocols supported by the (logical) server.<a href="#section-4-7" class="pilcrow">¶</a></p>
 <p id="section-4-8">A server deployment that supports multiple incompatible protocols MAY advertise
 all protocols that are supported by the same logical server.  A server needs to
@@ -1369,16 +1374,28 @@ would allow the client to act, which might amount to a few seconds.<a href="#sec
         <h3 id="name-validation">
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-validation" class="section-name selfRef">Validation</a>
         </h3>
-<p id="section-4.1-1">If a client has discovered server endpoints for a preferred protocol that point
-to the same logical server, receiving an incompatible_protocols extension that
-includes that protocol is a strong indication of a potential downgrade attack.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
-<p id="section-4.1-2">In response to detecting a potential downgrade attack, a client might abandon
-the current connection attempt and report an error.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
-<p id="section-4.1-3">A client might support an incompatible protocol, but chooses not to attempt its
-use under normal conditions might choose not to fail if it learns that the
-protocol is supported by the server.  This client might instead make a
+<p id="section-4.1-1">A client detects a likely downgrade attack if:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.1-2.1">the client has discovered server endpoints for a preferred protocol that point
+to a logical server,<a href="#section-4.1-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-4.1-2.2">an attempt to connect using the preferred protocol is unsuccessful,<a href="#section-4.1-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-4.1-2.3">an attempt to connect to the same logical server using a protocol that is
+incompatible with the preferred protocol is successful, and<a href="#section-4.1-2.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-4.1-2.4">an incompatible_protocols extension that lists the preferred protocol is
+received on the successful connection attempt.<a href="#section-4.1-2.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-4.1-3">In response to detecting a potential downgrade attack, a client might abandon
+the current connection attempt and report an error.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">These steps can occur in a different order.  For instance, a client might
+support an incompatible protocol, but choose not to attempt to make a connection
+with that protocol under normal conditions.  That client might instead make a
 connection attempt or initiate discovery for that protocol when it learns that
-it is available.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+the preferred protocol is available by some means.  Such a client then detects a
+downgrade attack when the connection attempt fails.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="quic">
@@ -1411,7 +1428,7 @@ connection.  The Alternative Services <span>[<a href="#ALTSVC" class="xref">ALTS
 HTTP/3 <span>[<a href="#HTTP3" class="xref">HTTP3</a>]</span> is not vulnerable to downgrade as the signal is exchanged over
 an authenticated connection.  A server can advertise the presence of an endpoint
 that supports HTTP/3 using an HTTP/2 or HTTP/1.1 connection.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
-<p id="section-4.3-2">A client can choose to ignore incompatible protocols when attempting to use an
+<p id="section-4.3-2">A client MAY choose to ignore incompatible protocols when attempting to use an
 alternative service.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1546,15 +1563,19 @@ believe that other options do not exist.<a href="#section-6-1" class="pilcrow">�
 <dd class="break"></dd>
 <dt id="HTTP11">[HTTP11]</dt>
         <dd>
-<span class="refAuthor">Fielding, R. T.</span>, <span class="refAuthor">Nottingham, M.</span>, and <span class="refAuthor">J. Reschke</span>, <span class="refTitle">"HTTP/1.1"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-httpbis-messaging-19</span>, <time datetime="2021-09-12" class="refDate">12 September 2021</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-messaging-19">https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-messaging-19</a>&gt;</span>. </dd>
+<span class="refAuthor">Fielding, R., Ed.</span>, <span class="refAuthor">Nottingham, M., Ed.</span>, and <span class="refAuthor">J. Reschke, Ed.</span>, <span class="refTitle">"HTTP/1.1"</span>, <span class="seriesInfo">STD 99</span>, <span class="seriesInfo">RFC 9112</span>, <span class="seriesInfo">DOI 10.17487/RFC9112</span>, <time datetime="2022-06" class="refDate">June 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9112">https://www.rfc-editor.org/rfc/rfc9112</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="HTTP2">[HTTP2]</dt>
         <dd>
-<span class="refAuthor">Thomson, M.</span> and <span class="refAuthor">C. Benfield</span>, <span class="refTitle">"HTTP/2"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-httpbis-http2bis-07</span>, <time datetime="2022-01-24" class="refDate">24 January 2022</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-http2bis-07">https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-http2bis-07</a>&gt;</span>. </dd>
+<span class="refAuthor">Thomson, M., Ed.</span> and <span class="refAuthor">C. Benfield, Ed.</span>, <span class="refTitle">"HTTP/2"</span>, <span class="seriesInfo">RFC 9113</span>, <span class="seriesInfo">DOI 10.17487/RFC9113</span>, <time datetime="2022-06" class="refDate">June 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9113">https://www.rfc-editor.org/rfc/rfc9113</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="HTTP3">[HTTP3]</dt>
         <dd>
-<span class="refAuthor">Bishop, M.</span>, <span class="refTitle">"HTTP/3"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-quic-http-34</span>, <time datetime="2021-02-02" class="refDate">2 February 2021</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-quic-http-34">https://datatracker.ietf.org/doc/html/draft-ietf-quic-http-34</a>&gt;</span>. </dd>
+<span class="refAuthor">Bishop, M., Ed.</span>, <span class="refTitle">"HTTP/3"</span>, <span class="seriesInfo">RFC 9114</span>, <span class="seriesInfo">DOI 10.17487/RFC9114</span>, <time datetime="2022-06" class="refDate">June 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9114">https://www.rfc-editor.org/rfc/rfc9114</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="QUIC">[QUIC]</dt>
+        <dd>
+<span class="refAuthor">Iyengar, J., Ed.</span> and <span class="refAuthor">M. Thomson, Ed.</span>, <span class="refTitle">"QUIC: A UDP-Based Multiplexed and Secure Transport"</span>, <span class="seriesInfo">RFC 9000</span>, <span class="seriesInfo">DOI 10.17487/RFC9000</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9000">https://www.rfc-editor.org/rfc/rfc9000</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="QUIC-TLS">[QUIC-TLS]</dt>
         <dd>
@@ -1603,7 +1624,7 @@ multiple incompatible protocols.  Thus, it is necessary to understand the set of
 endpoints at a server that offer the incompatible protocols.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-2">Thus, the definition of where incompatible protocols needs to encompass multiple
 endpoints somehow.<a href="#appendix-B-2" class="pilcrow">¶</a></p>
-<p id="appendix-B-3">A number of choices are possible here:<a href="#appendix-B-3" class="pilcrow">¶</a></p>
+<p id="appendix-B-3">A number of choices are possible here (this list is not exhaustive):<a href="#appendix-B-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-4.1">The set of endpoints that are authoritative for the same domain name.<a href="#appendix-B-4.1" class="pilcrow">¶</a>
 </li>
@@ -1628,11 +1649,11 @@ use of different ports for entirely different services.  These can have
 different operational constraints, such as deployment schedules.  Including
 different ports in the same scope could force all services on the same host to
 support a consistent set of protocols.<a href="#appendix-B-7" class="pilcrow">¶</a></p>
-<p id="appendix-B-8">This leaves IP and port.  There is a risk that the same port number is used for
-completely different purposes depending on the choice of protocol.  This
-practice is sufficiently rare that it is not anticipated to be a problem.
-Finally, a deployment with no ability to coordinate the deployment of protocols
-that share an IP and port can choose not to advertise the availability of
+<p id="appendix-B-8">This leaves IP and port.  There is still a risk that the same port number is
+used for completely different purposes depending on the choice of protocol.
+This practice is sufficiently rare that it is not anticipated to be a problem.
+A deployment with no ability to coordinate the deployment of protocols that
+share an IP and port can choose not to advertise the availability of
 incompatible protocols.<a href="#appendix-B-8" class="pilcrow">¶</a></p>
 </section>
 </div>

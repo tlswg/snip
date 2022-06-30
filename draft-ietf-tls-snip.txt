@@ -4,8 +4,8 @@
 
 Network Working Group                                         M. Thomson
 Internet-Draft                                                   Mozilla
-Intended status: Informational                              29 June 2022
-Expires: 31 December 2022
+Intended status: Informational                              30 June 2022
+Expires: 1 January 2023
 
 
           Secure Negotiation of Incompatible Protocols in TLS
@@ -34,7 +34,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 31 December 2022.
+   This Internet-Draft will expire on 1 January 2023.
 
 Copyright Notice
 
@@ -88,19 +88,25 @@ Table of Contents
    the server chooses the option that it most prefers.  A downgrade
    attack occurs where both client and server support a protocol that
    the server prefers more than than the selected protocol.  ALPN
-   protects against this attack by ensuring that the server is aware of
-   all options the client supports and including those options and the
-   server choice under the integrity protection provided by the TLS
-   handshake.
+   protects against this attack by ensuring that the options the client
+   offers and the choice the server makes are included in the TLS
+   handshake.  Confirming the TLS handshake then ensures that the client
+   and server agree on both the offered options and the server choice,
+   preventing an attacker from altering either.
 
-   Downgrade protection in ALPN functions because protocol negotiation
-   is part of the TLS handshake.  The introduction of semantically-
-   equivalent protocols that use incompatible handshakes introduces new
-   opportunities for downgrade attack.  For instance, it is not possible
-   to negotiate the use of HTTP/2 based on an attempt to connect using
-   HTTP/3.  The former relies on TCP, whereas the latter uses UDP.
-   These protocols are therefore mutually incompatible and ALPN cannot
-   be used to securely select between the two.
+   The introduction of semantically-equivalent protocols that use
+   incompatible handshakes introduces new opportunities for downgrade
+   attack.  ALPN cannot be used to securely select between incompatible
+   protocols.  For instance, it is not possible to negotiate the use of
+   HTTP/2 based on an attempt to connect using HTTP/3.  The former
+   relies on TCP, whereas the latter uses UDP.
+
+   In this example, a client that attempts a connection with HTTP/2
+   cannot use ALPN to express that it might want to use HTTP/3.  The
+   client needs to initiate a QUIC connection [QUIC] if it wants to
+   attempt HTTP/3.  Even if HTTP/3 is preferred, an attacker need only
+   block the HTTP/3 connection attempt to cause the client and server to
+   use HTTP/2.
 
    This document defines an extension to TLS that allows clients to
    discover when a server supports alternative protocols that are
@@ -139,12 +145,13 @@ Table of Contents
    This document extends the authentication protections provided by TLS
    to cover negotiation of incompatible protocols.
 
-   This is complementary to ALPN [ALPN], which only protects the
-   negotiation of compatible protocols.  In ALPN, the client presents a
-   set of compatible options and the server chooses its most preferred.
+   This is complementary to ALPN [ALPN], which protects the negotiation
+   of compatible protocols.  In ALPN, the client presents a set of
+   compatible options and the server chooses its most preferred and the
+   server chooses its most preferred.
 
    This extension works by having a server offer a list of incompatible
-   protocols that it supports on the same logical server (see
+   protocols that are available for use on the same logical server (see
    Section 3.2).  How clients use this information will depend on client
    policy.
 
@@ -153,7 +160,8 @@ Table of Contents
    A client has to choose between incompatible options before making a
    connection attempt.  Thefore, this document does not define a
    negotiation mechanism, it only provides authenticated information
-   that a client can use.
+   that a client can use to validate information it acquires from other
+   sources, such as [SVCB].
 
    Importantly, detecting a potential downgrade between incompatible
    protocols does not automatically imply that a client abandon a
@@ -236,7 +244,7 @@ Table of Contents
    application_layer_protocol_negotiation extension MUST send a fatal
    missing_extension alert.
 
-   A client offers an empty extension to indicate that is wishes to
+   A client offers an empty extension to indicate that it wishes to
    receive information about incompatible protocols supported by the
    (logical) server.
 
@@ -264,19 +272,31 @@ Table of Contents
 
 4.1.  Validation
 
-   If a client has discovered server endpoints for a preferred protocol
-   that point to the same logical server, receiving an
-   incompatible_protocols extension that includes that protocol is a
-   strong indication of a potential downgrade attack.
+   A client detects a likely downgrade attack if:
+
+   *  the client has discovered server endpoints for a preferred
+      protocol that point to a logical server,
+
+   *  an attempt to connect using the preferred protocol is
+      unsuccessful,
+
+   *  an attempt to connect to the same logical server using a protocol
+      that is incompatible with the preferred protocol is successful,
+      and
+
+   *  an incompatible_protocols extension that lists the preferred
+      protocol is received on the successful connection attempt.
 
    In response to detecting a potential downgrade attack, a client might
    abandon the current connection attempt and report an error.
 
-   A client might support an incompatible protocol, but chooses not to
-   attempt its use under normal conditions might choose not to fail if
-   it learns that the protocol is supported by the server.  This client
-   might instead make a connection attempt or initiate discovery for
-   that protocol when it learns that it is available.
+   These steps can occur in a different order.  For instance, a client
+   might support an incompatible protocol, but choose not to attempt to
+   make a connection with that protocol under normal conditions.  That
+   client might instead make a connection attempt or initiate discovery
+   for that protocol when it learns that the preferred protocol is
+   available by some means.  Such a client then detects a downgrade
+   attack when the connection attempt fails.
 
 4.2.  QUIC Version Negotiation
 
@@ -305,7 +325,7 @@ Table of Contents
    advertise the presence of an endpoint that supports HTTP/3 using an
    HTTP/2 or HTTP/1.1 connection.
 
-   A client can choose to ignore incompatible protocols when attempting
+   A client MAY choose to ignore incompatible protocols when attempting
    to use an alternative service.
 
 5.  Operational Considerations
@@ -405,21 +425,21 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-ietf-tls-
               dtls13-43>.
 
-   [HTTP11]   Fielding, R. T., Nottingham, M., and J. Reschke,
-              "HTTP/1.1", Work in Progress, Internet-Draft, draft-ietf-
-              httpbis-messaging-19, 12 September 2021,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-
-              messaging-19>.
+   [HTTP11]   Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
+              Ed., "HTTP/1.1", STD 99, RFC 9112, DOI 10.17487/RFC9112,
+              June 2022, <https://www.rfc-editor.org/rfc/rfc9112>.
 
-   [HTTP2]    Thomson, M. and C. Benfield, "HTTP/2", Work in Progress,
-              Internet-Draft, draft-ietf-httpbis-http2bis-07, 24 January
-              2022, <https://datatracker.ietf.org/doc/html/draft-ietf-
-              httpbis-http2bis-07>.
+   [HTTP2]    Thomson, M., Ed. and C. Benfield, Ed., "HTTP/2", RFC 9113,
+              DOI 10.17487/RFC9113, June 2022,
+              <https://www.rfc-editor.org/rfc/rfc9113>.
 
-   [HTTP3]    Bishop, M., "HTTP/3", Work in Progress, Internet-Draft,
-              draft-ietf-quic-http-34, 2 February 2021,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-quic-
-              http-34>.
+   [HTTP3]    Bishop, M., Ed., "HTTP/3", RFC 9114, DOI 10.17487/RFC9114,
+              June 2022, <https://www.rfc-editor.org/rfc/rfc9114>.
+
+   [QUIC]     Iyengar, J., Ed. and M. Thomson, Ed., "QUIC: A UDP-Based
+              Multiplexed and Secure Transport", RFC 9000,
+              DOI 10.17487/RFC9000, May 2021,
+              <https://www.rfc-editor.org/rfc/rfc9000>.
 
    [QUIC-TLS] Thomson, M. and S. Turner, "Using TLS to Secure QUIC",
               Work in Progress, Internet-Draft, draft-ietf-quic-tls-34,
@@ -468,7 +488,7 @@ Appendix B.  Defining Logical Servers
    Thus, the definition of where incompatible protocols needs to
    encompass multiple endpoints somehow.
 
-   A number of choices are possible here:
+   A number of choices are possible here (this list is not exhaustive):
 
    *  The set of endpoints that are authoritative for the same domain
       name.
@@ -500,13 +520,12 @@ Appendix B.  Defining Logical Servers
    could force all services on the same host to support a consistent set
    of protocols.
 
-   This leaves IP and port.  There is a risk that the same port number
-   is used for completely different purposes depending on the choice of
-   protocol.  This practice is sufficiently rare that it is not
-   anticipated to be a problem.  Finally, a deployment with no ability
-   to coordinate the deployment of protocols that share an IP and port
-   can choose not to advertise the availability of incompatible
-   protocols.
+   This leaves IP and port.  There is still a risk that the same port
+   number is used for completely different purposes depending on the
+   choice of protocol.  This practice is sufficiently rare that it is
+   not anticipated to be a problem.  A deployment with no ability to
+   coordinate the deployment of protocols that share an IP and port can
+   choose not to advertise the availability of incompatible protocols.
 
 Author's Address
 
